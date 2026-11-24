@@ -1,0 +1,1232 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="An interactive timeline from the Big Bang to today.">
+<link rel="icon" href="img/icon.png">
+<style>:root{color-scheme:dark;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<script>window.ATLAS_SITE = {"download":"https://github.com/Sisyphus22/atlas-of-all-time/releases/latest"};</script>
+</head><body>
+<title>Atlas of All Time</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=IM+Fell+English+SC&family=Inter:wght@400;500;600&family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a candlelit archive. Header and search, then one long horizontal ledger of time
+   (deep time bands, civilisations, then a lane per subject), then the chosen moment and Claude's account of it. */
+:root{
+  --bg:#110f0d; --panel:#191613; --panel-2:#221e1a; --line:#342e27; --line-soft:#26221d;
+  --fg:#efe6d6; --muted:#a89e8d; --dim:#6f675b; --gold:#e2ad5b; --gold-soft:rgba(226,173,91,.14);
+  --danger:#f0786c;
+  --display:"IM Fell English", "Iowan Old Style", Georgia, serif;
+  --display-sc:"IM Fell English SC", "IM Fell English", Georgia, serif;
+  --ui:"Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --read:"Spectral", Georgia, "Times New Roman", serif;
+  --mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--ui);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1480px;margin:0 auto}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+h1,h2,h3{text-wrap:balance;margin:0}
+
+/* Header */
+.intro{position:relative;height:clamp(300px,44vw,560px);overflow:hidden;background:#0b0a09}
+.intro video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:62% 45%}
+.intro-shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(to top,var(--bg) 0%,rgba(17,15,13,.86) 24%,rgba(17,15,13,.3) 58%,rgba(17,15,13,0) 80%),linear-gradient(to right,rgba(17,15,13,.72) 0%,rgba(17,15,13,0) 58%)}
+.intro-text{position:absolute;left:0;right:0;bottom:0;padding-block:0 22px}
+.intro-text .lead{color:#d9d0c1}
+.intro-toggle{position:absolute;top:14px;left:max(16px,env(safe-area-inset-left,0px));background:rgba(17,15,13,.7);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12px;color:var(--fg)}
+.intro-toggle:hover{border-color:var(--gold)}
+.top{padding-block:18px 18px;display:grid;grid-template-columns:minmax(0,760px);gap:28px;align-items:end}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.intro h1{font-family:var(--display);font-weight:400;font-size:clamp(40px,6.2vw,76px);line-height:.95;margin-top:10px;letter-spacing:-.01em}
+.intro h1 em{font-style:italic;color:var(--gold)}
+.lead{color:var(--muted);max-width:56ch;margin:14px 0 0;font-size:15.5px}
+.search{display:flex;flex-direction:column;gap:10px}
+.search label{font-size:13px;color:var(--muted)}
+.search-row{display:flex;gap:8px}
+.search input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:13px 14px;font-size:17px;font-family:var(--read)}
+.search input::placeholder{color:var(--dim)}
+.btn{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:9px 14px;font-size:14px;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--gold-dim,#7b6038);background:#2a251f}
+.btn.primary{background:var(--gold);color:#1a1307;border-color:var(--gold);font-weight:600}
+.btn.primary:hover{background:#f0bf6f}
+.btn.ghost{background:transparent}
+.btn[disabled]{opacity:.5;cursor:default}
+.search .btn.primary{padding:0 22px;font-size:15px}
+.err{color:var(--danger);font-size:13px;min-height:1.2em;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:transparent;border:1px solid var(--line);border-radius:999px;padding:4px 11px;font-size:12.5px;color:var(--muted)}
+.chip:hover{color:var(--fg);border-color:var(--gold)}
+.chip.feature{border-color:rgba(226,173,91,.5);color:var(--gold)}
+
+/* Timeline */
+.ledger{padding-block:6px 10px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets .btn{padding:6px 11px;font-size:13px}
+.zoom{display:flex;gap:6px}
+.zoom .btn{width:36px;padding:6px 0;font-size:16px}
+.stage{position:relative;border:1px solid var(--line);border-radius:8px;background:#0d0c0a;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+.stage canvas{display:block;width:100%;cursor:grab}
+.stage canvas.dragging{cursor:grabbing}
+.tip{position:absolute;pointer-events:none;background:#24201b;border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12.5px;max-width:260px;box-shadow:0 6px 24px rgba(0,0,0,.5);z-index:2}
+.tip b{display:block;font-weight:600}
+.tip span{color:var(--muted);font-family:var(--mono);font-size:11px}
+.under{display:flex;flex-wrap:wrap;gap:10px 18px;justify-content:space-between;align-items:center;margin-top:10px}
+.hint{color:var(--dim);font-size:12.5px;margin:0}
+.legend{display:flex;flex-wrap:wrap;gap:6px}
+.lg{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--line-soft);border-radius:999px;padding:3px 10px 3px 8px;font-size:12px;color:var(--fg)}
+.lg i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.lg[aria-pressed="false"]{color:var(--dim)}
+.lg[aria-pressed="false"] i{background:transparent;box-shadow:inset 0 0 0 1.5px var(--c)}
+
+/* Moment */
+.moment{padding-block:28px 10px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:24px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:22px 22px 24px;min-width:0}
+.m-date{font-family:var(--display);font-size:clamp(30px,4vw,46px);line-height:1.05;margin-top:6px}
+.m-ago{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:6px}
+.crumbs{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;margin-top:14px;font-size:13px;color:var(--muted)}
+.crumbs b{color:var(--fg);font-weight:500}
+.crumbs .sep{color:var(--dim)}
+.sub{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin:22px 0 8px}
+.alive{display:flex;flex-wrap:wrap;gap:6px}
+.alive button{background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:4px 9px;font-size:12.5px;text-align:left}
+.alive button:hover{border-color:var(--gold)}
+.alive button small{color:var(--dim);margin-left:6px;font-family:var(--mono);font-size:10.5px}
+.near{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.near li button{display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:10px;align-items:baseline;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--line-soft);padding:8px 2px}
+.near li:first-child button{border-top:0}
+.near li button:hover .nt{color:var(--gold)}
+.near i{width:8px;height:8px;border-radius:50%;background:var(--c);transform:translateY(-1px)}
+.nt{font-size:14px}
+.nd{font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap}
+.empty{color:var(--dim);font-size:13.5px;margin:0}
+a.paper{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:baseline;padding:8px 2px;border-top:1px solid var(--line-soft);color:var(--fg);text-decoration:none}
+.near li:first-child a.paper{border-top:0}
+a.paper .nt{text-decoration:underline;text-decoration-color:var(--gold-soft);text-underline-offset:3px}
+a.paper:hover .nt{color:var(--gold)}
+a.paper .nd{white-space:normal;text-align:right}
+.papers{margin-top:18px}
+
+.ask h2{font-family:var(--display);font-weight:400;font-size:28px}
+.ask p.note{color:var(--muted);font-size:13.5px;margin:6px 0 0}
+.ask-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:16px}
+.ask-form select,.ask-form textarea,.field input,.field select,.field textarea{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:9px 10px;font-size:14px;min-width:0;width:100%}
+.ask-form textarea{grid-column:1 / -1;resize:vertical;min-height:44px}
+.ask-actions{display:flex;gap:8px;grid-column:1 / -1}
+.status{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:14px;min-height:1.3em}
+.prose{font-family:var(--read);font-size:16.5px;line-height:1.62;max-width:68ch}
+.prose h3{font-family:var(--display-sc);font-weight:400;font-size:19px;color:var(--gold);margin:20px 0 4px;letter-spacing:.02em}
+.prose h3:first-child{margin-top:4px}
+.prose p{margin:0 0 10px}
+.prose ul{margin:0 0 10px;padding-left:20px}
+.prose li{margin:0 0 5px}
+.prose strong{font-weight:600;color:#fff6e6}
+.answer-box{margin-top:6px}
+
+/* Era guide */
+.era{padding-block:34px 10px}
+.era-grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:28px;align-items:start}
+.era figure{margin:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#0b0a09}
+.era figure img{display:block;width:100%;height:auto}
+.era figcaption{font-size:12px;color:var(--dim);padding:8px 12px;font-family:var(--mono)}
+.era h2{font-family:var(--display);font-weight:400;font-size:clamp(32px,4.4vw,52px);line-height:1;margin-top:8px}
+.era h2 em{color:var(--gold)}
+.era .prose{margin-top:14px}
+.era-lists{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;margin-top:20px}
+
+/* Your entries */
+.mine{padding-block:30px 10px}
+.mine-head{display:flex;flex-wrap:wrap;gap:12px;align-items:end;justify-content:space-between}
+.mine h2{font-family:var(--display);font-weight:400;font-size:30px}
+
+footer{padding-block:34px 48px;color:var(--dim);font-size:12.5px;border-top:1px solid var(--line-soft);margin-top:30px}
+.credit{margin:14px 0 0;font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--muted)}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(6,5,4,.72);backdrop-filter:blur(3px);z-index:20;display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:min(720px,100%);max-height:100%;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.6);animation:pop .22s ease-out}
+@keyframes pop{from{transform:translateY(8px) scale(.985);opacity:.6}to{transform:none;opacity:1}}
+.modal-fig{position:relative;background:#0b0a09;border-bottom:1px solid var(--line)}
+.modal-fig img{display:block;width:100%;max-height:52vh;object-fit:cover}
+.modal-fig .tag{position:absolute;left:10px;bottom:10px;background:rgba(17,15,13,.85);border:1px solid var(--line);border-radius:4px;padding:2px 8px;font-size:11px;font-family:var(--mono);color:var(--muted)}
+.plate{height:120px;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(135deg,transparent 0 9px,rgba(255,255,255,.025) 9px 10px),radial-gradient(ellipse at center,color-mix(in srgb,var(--c) 22%,transparent),transparent 70%)}
+.plate span{font-family:var(--display-sc);font-size:15px;color:var(--c);letter-spacing:.08em}
+.modal-body{padding:20px 22px 24px}
+.modal-body h3{font-family:var(--display);font-weight:400;font-size:clamp(26px,3.4vw,36px);line-height:1.08;margin-top:6px}
+.modal-body .prose{margin-top:10px}
+.modal-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.x{position:sticky;top:0;float:right;margin:10px 10px -46px 0;z-index:3;width:36px;height:36px;border-radius:50%;background:rgba(17,15,13,.85);border:1px solid var(--line);font-size:18px;line-height:1}
+.confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;font-size:13.5px;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:5px;margin-top:12px}
+.field label{font-size:12.5px;color:var(--muted)}
+.field-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.field textarea{min-height:90px;resize:vertical}
+.small{font-size:12.5px;color:var(--dim)}
+
+@media (max-width:900px){
+  .top,.moment,.era-grid,.era-lists{grid-template-columns:minmax(0,1fr)}
+  .top{padding-block:26px 14px;gap:20px}
+}
+@media (max-width:520px){
+  .field-row{grid-template-columns:minmax(0,1fr)}
+  .card{padding:18px 16px 20px}
+  .search input{font-size:16px}
+}
+@media (prefers-reduced-motion:reduce){.modal{animation:none}}
+</style>
+
+<section class="intro" aria-label="Opening">
+  <video id="introVideo" autoplay muted loop playsinline preload="auto" poster="img/atlas-intro-poster.jpg" aria-label="Charcoal sketch: a robed figure on a cliff releases a stream of shards over a misty valley of rock towers and still water">
+    <source src="media/atlas-intro.mp4" type="video/mp4">
+  </video>
+  <div class="intro-shade"></div>
+  <div class="wrap intro-text">
+    <div class="eyebrow">13.8 billion years · one ledger</div>
+    <h1>Atlas of <em>All Time</em></h1>
+    <p class="lead">Type any moment, from the Big Bang to this morning. The atlas shows where it sits in deep time, which civilisations were alive, what happened nearby in every field, and Claude can tell you the rest.</p>
+  </div>
+  <button class="intro-toggle" id="introToggle" type="button" aria-pressed="false">Pause</button>
+</section>
+<header class="wrap top">
+  <form class="search" id="searchForm" autocomplete="off">
+    <label for="q">Go to a date</label>
+    <div class="search-row">
+      <input id="q" name="q" type="text" placeholder="15 June 1215 · 1919 · 500 BC · 66 million years ago" aria-describedby="qErr">
+      <button class="btn primary" type="submit">Go</button>
+    </div>
+    <p class="err" id="qErr" role="status"></p>
+    <div class="chips" id="examples"></div>
+  </form>
+</header>
+
+<section class="wrap ledger" aria-label="Timeline">
+  <div class="toolbar">
+    <div class="presets" id="presets"></div>
+    <div class="zoom">
+      <button class="btn" id="zoomOut" type="button" aria-label="Zoom out">&minus;</button>
+      <button class="btn" id="zoomIn" type="button" aria-label="Zoom in">+</button>
+    </div>
+  </div>
+  <div class="stage" id="stage">
+    <canvas id="cv" role="img" aria-label="Interactive timeline of history. Use the date search and the moment panel below for a text version."></canvas>
+    <div class="tip" id="tip" hidden></div>
+  </div>
+  <div class="under">
+    <p class="hint">Drag to travel · scroll or pinch to zoom · click a dot or bar to open it · click empty space to read that moment</p>
+    <div class="legend" id="legend"></div>
+  </div>
+</section>
+
+<section class="wrap moment" aria-label="Selected moment">
+  <div class="card" id="momentCard">
+    <div class="eyebrow">The moment</div>
+    <div class="m-date" id="mDate">…</div>
+    <div class="m-ago" id="mAgo"></div>
+    <div class="crumbs" id="mCrumbs"></div>
+    <div id="mOnDay"></div>
+    <div class="sub">Alive at this moment</div>
+    <div class="alive" id="mAlive"></div>
+    <div class="sub">Happening around then</div>
+    <ul class="near" id="mNear"></ul>
+    <div id="mPapers">
+      <div class="sub" id="mPapersHead">Read the papers</div>
+      <p class="small" id="mPapersNote"></p>
+      <div class="field" style="margin-top:6px"><label for="paperQ">Words to look for (optional)</label><input id="paperQ" type="text" placeholder="e.g. Whitechapel, Amundsen, Reichstag"></div>
+      <ul class="near" id="mPapersList" style="margin-top:8px"></ul>
+    </div>
+  </div>
+  <div class="card ask" id="askCard">
+    <div class="eyebrow">Everything else</div>
+    <h2>Ask Claude about this moment</h2>
+    <p class="note">The atlas holds a few hundred milestones. For the rest, from daily life to the front pages, ask Claude. Answers can contain mistakes, so check anything important.</p>
+    <div class="ask-form">
+      <select id="askFocus" aria-label="What to focus on">
+        <option value="everything">Everything happening then</option>
+        <option value="daily">Daily life: food, work, homes, clothes</option>
+        <option value="newspaper">The front pages, if there were any</option>
+        <option value="power">Politics and power</option>
+        <option value="war">Wars and conflict</option>
+        <option value="science">Science and technology</option>
+        <option value="art">Art, music and stories</option>
+        <option value="economy">Money and trade</option>
+        <option value="disease">Disease and medicine</option>
+        <option value="nature">Nature, climate and animals</option>
+        <option value="strange">Strange but true</option>
+      </select>
+      <button class="btn primary" id="askBtn" type="button">Ask Claude</button>
+      <textarea id="askQ" rows="2" placeholder="Anything specific? For example: what did a village in Sussex eat in winter?"></textarea>
+    </div>
+    <div class="status" id="askStatus"></div>
+    <div class="prose answer-box" id="askOut"></div>
+    <div class="ask-actions"><button class="btn ghost" id="askStop" type="button" hidden>Stop</button></div>
+  </div>
+</section>
+
+<section class="wrap era" id="era" aria-label="Era guide">
+  <div class="era-grid">
+    <figure>
+      <img src="img/gothic-section.jpg" alt="Cut-away section of a candlelit Gothic cathedral at night, showing nave, vaults, flying buttresses, spire and crypt" width="1100" height="1100" loading="lazy">
+      <figcaption>Your image · Gothic section perspective (AI)</figcaption>
+    </figure>
+    <div>
+      <div class="eyebrow">Era guide · the world of Werwulf</div>
+      <h2>England in the <em>1200s</em></h2>
+      <div class="prose">
+        <p>Robert Eggers' <i>Werwulf</i> is set in 13th-century England. It was a country of about four to five million people by 1300 (estimates vary), almost all of them living in villages. Most were peasants, and many were unfree villeins who could not leave their lord's manor without permission.</p>
+        <p>Three languages shared one island. Villagers spoke Middle English, lords and the court spoke Anglo-Norman French, and the church and the law courts wrote in Latin. The word <i>werwulf</i> is Old English for 'man-wolf'.</p>
+        <p>'Forest' was a legal word, not a description of trees. Royal forest law covered huge areas, at its peak perhaps a third of the country, and taking the king's deer could cost you a hand or your life until the Charter of the Forest in 1217. An outlaw was said to 'bear a wolf's head': anyone could kill him like a wolf. Real wolves were being hunted out; in 1281 Edward I paid a man to destroy them in the western counties.</p>
+        <p>Werewolves lived in stories and sermons. Marie de France's <i>Bisclavret</i> made the werewolf the sympathetic hero, Gerald of Wales reported talking wolves in Ireland, and churchmen argued, following Saint Augustine, that a man could not truly change shape, only seem to. The burning of 'werewolves' came later, in 16th-century France and Germany.</p>
+        <p>The century ends in trouble: a cooling climate, the Great Famine of 1315, and in 1348 the Black Death.</p>
+      </div>
+      <div class="modal-actions"><button class="btn primary" id="eraGo" type="button">Show this era on the timeline</button></div>
+    </div>
+  </div>
+  <div class="era-lists">
+    <div class="card"><div class="sub" style="margin-top:0">England, 1154 to 1320</div><ul class="near" id="eraEngland"></ul></div>
+    <div class="card"><div class="sub" style="margin-top:0">Werewolves through history</div><ul class="near" id="eraWolves"></ul></div>
+  </div>
+</section>
+
+<section class="wrap mine" id="mine" aria-label="Your entries">
+  <div class="mine-head">
+    <div>
+      <div class="eyebrow">Your additions</div>
+      <h2>Your own entries</h2>
+      <p class="note small" id="mineNote">Add events, family history or your own artwork to the atlas. They appear in a gold lane on the timeline.</p>
+    </div>
+    <button class="btn primary" id="addEntryBtn" type="button" hidden>Add an entry</button>
+  </div>
+  <div class="card" style="margin-top:14px"><ul class="near" id="mineList"></ul></div>
+</section>
+
+<footer class="wrap">
+  Dates before writing are scientific estimates and get revised as new evidence appears. Deep-time boundaries follow the International Chronostratigraphic Chart. The timeline uses a logarithmic scale, so recent centuries get more room than distant aeons. Pictures you add are stored with this atlas.
+  <p class="credit">© 2026 Valeria · All rights reserved · Made with Claude</p>
+</footer>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"></div>
+</div>
+<input type="file" id="filePick" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm" hidden>
+
+<script>
+(() => {
+"use strict";
+
+/* ---------- constants ---------- */
+const CATS = [
+  ["cosmos","Cosmos","#9aa8ff"],["earth","Earth & climate","#5fc6b3"],["life","Life & evolution","#8fd16a"],
+  ["human","Human origins","#e3c48d"],["power","Politics & power","#ee8f6b"],["war","War & conflict","#f0605f"],
+  ["economy","Money & trade","#c9b66a"],["science","Science & tech","#5fb7ee"],["ideas","Religion & ideas","#ece07c"],
+  ["art","Art & architecture","#c79bf0"],["music","Music","#f28dc3"],["disease","Disease & medicine","#ff9f43"],
+  ["explore","Exploration","#7ee0e6"],["news","Newspapers & print","#b9c3d1"],
+  ["daily","Strange but true","#d9d2c3"],["mine","Your entries","#e2ad5b"]
+];
+
+/* Digitised newspaper archives. Each builds a search link for a date window [a, b] and optional words. */
+const pad2 = n => String(n).padStart(2, "0");
+const iso = p => String(p.y).padStart(4, "0") + "-" + pad2(p.m) + "-" + pad2(p.d);
+const dmy = p => pad2(p.d) + "-" + pad2(p.m) + "-" + p.y;
+const enc = encodeURIComponent;
+const ARCHIVES = [
+  {name:"Trove", where:"Australia", from:1803, to:2010, r:["au"], url:(a,b,q) => "https://trove.nla.gov.au/search/category/newspapers?" + (q ? "keyword=" + enc(q) + "&" : "") + "date.from=" + iso(a) + "&date.to=" + iso(b)},
+  {name:"Papers Past", where:"New Zealand", from:1839, to:1989, r:["nz"], url:(a,b,q) => "https://paperspast.natlib.govt.nz/newspapers?query=" + enc(q || "") + "&start_date=" + dmy(a) + "&end_date=" + dmy(b)},
+  {name:"Chronicling America", where:"United States", from:1756, to:1963, r:["us"], url:(a,b,q) => "https://www.loc.gov/collections/chronicling-america/?dates=" + iso(a) + "/" + iso(b) + (q ? "&q=" + enc(q) : "")},
+  {name:"British Newspaper Archive", where:"Britain & Ireland · free search, paid reading", from:1603, to:2010, r:["uk","in"], url:(a,b,q) => "https://www.britishnewspaperarchive.co.uk/search/results/" + iso(a) + "/" + iso(b) + (q ? "?basicsearch=" + enc(q) : "")},
+  {name:"ANNO", where:"Austria & German-language press · every paper for that day", from:1703, to:1950, r:["at","de"], url:(a) => "https://anno.onb.ac.at/cgi-content/anno?datum=" + a.y + pad2(a.m) + pad2(a.d)},
+  {name:"Deutsches Zeitungsportal", where:"Germany, including Berlin papers", from:1605, to:1950, r:["de"], url:(a,b,q) => "https://www.deutsche-digitale-bibliothek.de/newspaper/search?query=" + enc(q || String(a.y))},
+  {name:"Delpher", where:"Netherlands, from the first Dutch papers", from:1618, to:1995, r:["nl"], url:(a,b,q) => "https://www.delpher.nl/nl/kranten/results?query=" + enc(q || String(a.y))},
+  {name:"Gallica · RetroNews", where:"France", from:1631, to:1950, r:["fr"], url:() => "https://gallica.bnf.fr/html/presse-et-revues/presse-et-revues"},
+  {name:"Hemeroteca Digital", where:"Spain", from:1661, to:1990, r:["es"], url:() => "https://hemerotecadigital.bne.es/hd/es/"},
+  {name:"Hemeroteca Digital Brasileira", where:"Brazil & South America", from:1808, to:2000, r:["br"], url:() => "http://memoria.bn.gov.br/hdb/"},
+  {name:"NewspaperSG", where:"Singapore & Malaya", from:1831, to:2009, r:["sg"], url:() => "https://eresources.nlb.gov.sg/newspapers/"},
+  {name:"NDL Digital Collections", where:"Japan", from:1870, to:1990, r:["jp"], url:() => "https://dl.ndl.go.jp/"},
+  {name:"Internet Archive", where:"Worldwide books, pamphlets and papers", from:1450, to:2026, r:["world"], url:(a,b,q) => "https://archive.org/search?query=" + enc((q || "newspaper") + " " + a.y)},
+  {name:"Universal Short Title Catalogue", where:"Everything printed in Europe before 1650", from:1450, to:1650, r:["world"], url:() => "https://www.ustc.ac.uk/"}
+];
+function newsWindow(item){
+  if (typeof item.d === "string") { const [y,m,d] = item.d.split("-").map(Number); const t = decYear(y,m,d); return [fromDec(t - 1/365), fromDec(Math.min(t + 14/365, NOW))]; }
+  if (item.prec === "day") { return [fromDec(item.t - 1/365), fromDec(Math.min(item.t + 14/365, NOW))]; }
+  if (item.prec === "month") return [{y:item.y, m:item.m, d:1}, fromDec(Math.min(decYear(item.y, item.m, 28), NOW))];
+  const y = Math.floor(item.t); return [{y, m:1, d:1}, y >= today.getFullYear() ? fromDec(NOW) : {y, m:12, d:31}];
+}
+function archivesFor(year, regions){
+  const list = ARCHIVES.filter(a => year >= a.from && year <= a.to);
+  const score = a => { if (!regions) return 99; const i = Math.min(...a.r.map(r => { const k = regions.indexOf(r); return k < 0 ? 99 : k; })); return i; };
+  return list.sort((x, y) => score(x) - score(y));
+}
+function paperLinks(item, q){
+  const [a, b] = newsWindow(item);
+  return archivesFor(a.y, item.r).map(ar => el("li", null, el("a", {href: ar.url(a, b, q), target:"_blank", rel:"noopener", class:"paper"},
+    el("span", {class:"nt"}, ar.name), el("span", {class:"nd"}, ar.where))));
+}
+function paperNote(year){
+  if (year < 1450) return "Printed news begins after Gutenberg's press, around 1450.";
+  if (year < 1605) return "Before 1605 news travelled in printed pamphlets, broadsheets and handwritten newsletters. These catalogues hold what survives.";
+  return "Opens each archive's search for the dates around this moment. Some sites ask you to confirm you're human, and a few charge to read full pages.";
+}
+const CAT = Object.fromEntries(CATS.map(([k,n,c]) => [k,{key:k,name:n,color:c}]));
+const SPAN_LANES = [
+  ["eon","Eon","#8a76b0"],["era","Era","#6f87ad"],["period","Period","#5e958a"],["epoch","Epoch","#86975f"],
+  ["age","Ages","#b08a58"],["realm","Civilisations","#b07158"],["style","Styles","#9a73b3"]
+];
+const LANE = Object.fromEntries(SPAN_LANES.map(([k,n,c]) => [k,{key:k,name:n,color:c}]));
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------- time maths ---------- */
+function daysIn(y){ const a=new Date(0); a.setUTCFullYear(y,0,1); const b=new Date(0); b.setUTCFullYear(y+1,0,1); return (b-a)/864e5; }
+function decYear(y,m,d){ const a=new Date(0); a.setUTCFullYear(y,m-1,d); const b=new Date(0); b.setUTCFullYear(y,0,1); return y + ((a-b)/864e5 + .5)/daysIn(y); }
+function fromDec(t){ const y=Math.floor(t); const doy=Math.floor((t-y)*daysIn(y)); const a=new Date(0); a.setUTCFullYear(y,0,1+doy); return {y:a.getUTCFullYear(),m:a.getUTCMonth()+1,d:a.getUTCDate()}; }
+const today = new Date();
+const NOW = decYear(today.getFullYear(), today.getMonth()+1, today.getDate());
+const ago = t => Math.max(0, NOW - t);
+const U = t => Math.log10(ago(t) + 1);
+const tOfU = u => NOW - (Math.pow(10,u) - 1);
+const U_MAX = U(-13.8e9) + .035, U_MIN = -0.004, MIN_SPAN = 0.00004;
+
+function sig(n, s=3){ if(n===0) return "0"; const p=Math.pow(10, s-1-Math.floor(Math.log10(Math.abs(n)))); return String(Math.round(n*p)/p); }
+const fmtN = n => Math.round(n).toLocaleString("en-US");
+function ordinal(n){ const s=["th","st","nd","rd"], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
+
+function fmtMoment(sel){
+  const t = sel.t, a = ago(t);
+  if (a >= 1e9) return sig(a/1e9) + " billion years ago";
+  if (a >= 1e6) return sig(a/1e6) + " million years ago";
+  if (t < -10000) return fmtN(Number(sig(a))) + " years ago";
+  if (sel.prec === "century") return ordinal(sel.cent) + " century" + (sel.bce ? " BCE" : "");
+  if (sel.prec === "hundreds") return sel.n + "s";
+  if (sel.prec === "decade") return sel.n + "s";
+  if (t < 1) return fmtN(Math.ceil(-t) || 1) + " BCE";
+  const y = Math.floor(t);
+  if (sel.prec === "day") return sel.d + " " + MONTHS[sel.m-1] + " " + y;
+  if (sel.prec === "month") return MONTHS[sel.m-1] + " " + y;
+  return y < 1000 ? y + " CE" : String(y);
+}
+function fmtItemDate(it){
+  if (it.d) { const [y,m,d] = it.d.split("-").map(Number); return d + " " + MONTHS[m-1] + " " + y; }
+  return fmtMoment({t:it.t, prec:"year"});
+}
+function fmtRange(s){ const a = fmtMoment({t:s.s, prec:"year"}); const b = s.e == null ? "today" : fmtMoment({t:s.e, prec:"year"}); return a + " to " + b; }
+function fmtAgo(t){
+  const a = ago(t);
+  if (a < 1) return "this year";
+  if (a < 1e6) return fmtN(a) + " years ago";
+  return "";
+}
+function fmtDelta(dt){
+  const a = Math.abs(dt);
+  if (a < 0.5) return "same time";
+  let s;
+  if (a >= 1e9) s = sig(a/1e9,2) + " bn yrs";
+  else if (a >= 1e6) s = sig(a/1e6,2) + " m yrs";
+  else if (a >= 1e4) s = fmtN(Number(sig(a,2))) + " yrs";
+  else s = fmtN(a) + (Math.round(a) === 1 ? " yr" : " yrs");
+  return s + (dt < 0 ? " earlier" : " later");
+}
+function fmtTick(t, step){
+  const a = ago(t);
+  if (a >= 1e9) return sig(a/1e9) + " Bya";
+  if (a >= 1e6) return sig(a/1e6) + " Mya";
+  if (t < -18000) return sig(a/1e3) + " kya";
+  if (step < 1) { const p = fromDec(t + 1e-6); return MONTHS[p.m-1].slice(0,3) + " " + p.y; }
+  if (Math.abs(t) < 0.5) return "1 CE";
+  if (t < 0.5) return fmtN(Math.round(-t)) + " BCE";
+  const y = Math.round(t); return y < 1000 ? y + " CE" : String(y);
+}
+function nice(v){ const p = Math.pow(10, Math.floor(Math.log10(v))); for (const m of [1,2,5,10]) if (m*p >= v) return m*p; return 10*p; }
+
+/* ---------- date parser ---------- */
+function parseQuery(raw){
+  let s = raw.trim().toLowerCase().replace(/,/g,"").replace(/\s+/g," ");
+  if (!s) return null;
+  s = s.replace(/^(about|around|circa|c\.|ca\.|~)\s*/,"");
+  if (s === "today" || s === "now") { const d = new Date(); return {t:decYear(d.getFullYear(),d.getMonth()+1,d.getDate()), prec:"day", y:d.getFullYear(), m:d.getMonth()+1, d:d.getDate()}; }
+  if (/big ?bang/.test(s)) return {t:-13.8e9, prec:"deep"};
+  let m = s.match(/^(\d+(?:\.\d+)?)\s*(billion|bn|b|bya|ga|gya|million|mn|m|mya|ma|thousand|k|kya|ka)\b\s*(?:years?|yrs?)?\s*(?:ago)?$/);
+  if (m) { const u = m[2]; const mult = /^(billion|bn|b|bya|ga|gya)$/.test(u) ? 1e9 : /^(million|mn|m|mya|ma)$/.test(u) ? 1e6 : 1e3; const a = parseFloat(m[1])*mult; if (a > 13.8e9) return {error:"That is before the Big Bang (13.8 billion years ago)."}; return {t:NOW - a, prec:"deep"}; }
+  m = s.match(/^(\d+(?:\.\d+)?)\s*(?:years?|yrs?)\s*ago$/);
+  if (m) { const a = parseFloat(m[1]); return {t:NOW - a, prec: a > 12000 ? "deep" : "year"}; }
+  m = s.match(/^(\d{1,2})(?:st|nd|rd|th)?\s*(?:c\.?|cent\.?|century)\s*(bce|bc|ce|ad)?$/);
+  if (m) { const c = +m[1]; const bce = /^bc/.test(m[2]||""); if (!c) return null; return {t: bce ? -(c*100-50) : (c-1)*100+50, prec:"century", cent:c, bce}; }
+  m = s.match(/^(\d{3,4})s$/);
+  if (m) { const n = +m[1]; return n % 100 === 0 ? {t:n+50, prec:"hundreds", n} : {t:n+5, prec:"decade", n}; }
+  m = s.match(/^(\d+)\s*(bce|bc|b\.c\.e?\.?)$/);
+  if (m) return {t:-(+m[1]) + .5, prec:"year"};
+  m = s.match(/^-(\d+)$/);
+  if (m) return {t:-(+m[1]) + .5, prec:"year"};
+  m = s.match(/^(?:ad|ce)?\s*(\d{1,4})\s*(?:ad|ce)?$/);
+  if (m) { const y = +m[1]; if (y > today.getFullYear()) return {error:"That year hasn't happened yet."}; return {t:y + .5, prec:"year"}; }
+  m = s.match(/^(\d{1,4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return mkDay(+m[1], +m[2], +m[3]);
+  m = s.match(/^(\d{1,2})[\/.](\d{1,2})[\/.](\d{1,4})$/);
+  if (m) return mkDay(+m[3], +m[2], +m[1]);
+  // month names
+  const cleaned = s.replace(/(\d+)(st|nd|rd|th)\b/g,"$1");
+  let words = cleaned.split(/[\s\/-]+/).filter(w => w && w !== "of" && w !== "the");
+  let bce = false;
+  words = words.filter(w => { if (/^(bc|bce|b\.c\.)$/.test(w)) { bce = true; return false; } return !/^(ad|ce)$/.test(w); });
+  const mi = words.findIndex(w => w.length >= 3 && MONTHS.some(M => M.toLowerCase().startsWith(w.slice(0,3)) && M.toLowerCase().startsWith(w)));
+  if (mi >= 0) {
+    const month = MONTHS.findIndex(M => M.toLowerCase().startsWith(words[mi].slice(0,3))) + 1;
+    const nums = words.filter((w,i) => i !== mi && /^\d+$/.test(w)).map(Number);
+    if (nums.length === 2) {
+      let [a,b] = nums; let d, y;
+      if (a <= 31 && (b > 31 || words.indexOf(String(a)) < words.indexOf(String(b)))) { d = a; y = b; } else { y = a; d = b; }
+      if (bce) return {t:-y + .5, prec:"year"};
+      return mkDay(y, month, d);
+    }
+    if (nums.length === 1) { const y = nums[0]; if (bce) return {t:-y + .5, prec:"year"}; return {t:decYear(y, month, 15), prec:"month", y, m:month}; }
+  }
+  return null;
+}
+function mkDay(y, mo, d){
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return {error:"That day or month doesn't exist."};
+  const t = decYear(y, mo, d);
+  if (t > NOW + .01) return {error:"That date hasn't happened yet."};
+  const p = fromDec(t); if (p.d !== d) return {error:"That day doesn't exist in that month."};
+  return {t, prec:"day", y, m:mo, d};
+}
+
+/* ---------- state ---------- */
+const S = {
+  events: [], spans: [], entries: [], pictures: new Map(),
+  view: {uL: U_MAX, uR: U_MIN},
+  sel: null, hidden: new Set(), hover: null,
+  db: null, assets: null, sample: null
+};
+try { const h = JSON.parse(localStorage.getItem("atlas.hidden") || "[]"); if (Array.isArray(h)) h.forEach(k => S.hidden.add(k)); } catch(e) {}
+
+const $ = id => document.getElementById(id);
+const cv = $("cv"), stage = $("stage"), tip = $("tip"), ctx = cv.getContext("2d");
+function el(tag, attrs, ...kids){
+  const n = document.createElement(tag);
+  if (attrs) for (const [k,v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === "class") n.className = v; else if (k === "style") n.style.cssText = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) n.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return n;
+}
+function slug(s){ return s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,48); }
+
+/* ---------- data ---------- */
+async function load(){
+  const res = await fetch("data.json");
+  const data = await res.json();
+  const seen = new Set();
+  S.spans = data.spans.map(r => {
+    const [s,e,lane,name,note,x] = r; let id = "s-" + lane + "-" + slug(name);
+    while (seen.has(id)) id += "-2"; seen.add(id);
+    return {kind:"span", id, s, e, lane, name, title:name, text:note, img:x&&x.img, video:x&&x.video, f:x&&x.f};
+  });
+  S.events = data.events.map(r => {
+    const [t0,cat,title,text,x] = r; const d = x && x.d;
+    let t = t0 + (t0 > -10000 && !d ? .5 : 0);
+    if (d) { const [y,m,dd] = d.split("-").map(Number); t = decYear(y,m,dd); }
+    let id = "e-" + cat + "-" + slug(title); while (seen.has(id)) id += "-2"; seen.add(id);
+    return {kind:"event", id, t, cat, title, text, d, img:x&&x.img, video:x&&x.video, f:x&&x.f, q:x&&x.q, r:x&&x.r};
+  }).sort((a,b) => a.t - b.t);
+  packSpans();
+}
+function packSpans(){
+  for (const [lane] of SPAN_LANES) {
+    const list = S.spans.filter(s => s.lane === lane).sort((a,b) => a.s - b.s);
+    const ends = [];
+    for (const s of list) {
+      const e = s.e == null ? NOW : s.e;
+      let r = ends.findIndex(x => x <= s.s);
+      if (r < 0) { r = ends.length; ends.push(e); } else ends[r] = e;
+      s.row = r;
+    }
+    LANE[lane].rows = Math.max(1, ends.length);
+  }
+}
+function allEvents(){ return S.entries.length ? S.events.concat(S.entries).sort((a,b) => a.t - b.t) : S.events; }
+
+/* ---------- layout ---------- */
+const AXIS = 28, SROW = 15, LANE_H = 30, GAP = 7;
+let W = 800, H = 600, layout = [];
+function computeLayout(){
+  layout = []; let y = AXIS + 6;
+  for (const [k] of SPAN_LANES) {
+    const rows = LANE[k].rows || 1;
+    layout.push({type:"span", key:k, y, h: rows*SROW}); y += rows*SROW + (["epoch","age","realm"].includes(k) ? GAP : 2);
+  }
+  y += 4;
+  for (const [k] of CATS) {
+    if (S.hidden.has(k)) continue;
+    if (k === "mine" && !S.entries.length) continue;
+    layout.push({type:"cat", key:k, y, h:LANE_H}); y += LANE_H;
+  }
+  return y + 8;
+}
+function resize(){
+  W = Math.max(280, stage.clientWidth);
+  H = computeLayout();
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+  cv.style.height = H + "px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  draw();
+}
+const xOf = t => (S.view.uL - U(t)) / (S.view.uL - S.view.uR) * W;
+const tAtX = x => tOfU(S.view.uL - x/W * (S.view.uL - S.view.uR));
+
+/* ---------- drawing ---------- */
+let hits = [], spanHits = [], drawQueued = false;
+function requestDraw(){ if (!drawQueued) { drawQueued = true; requestAnimationFrame(() => { drawQueued = false; draw(); }); } }
+function ticks(){
+  const out = []; const n = Math.max(3, Math.floor(W/120));
+  for (let i = 0; i <= n; i++) {
+    const x = (i + .5) * W / (n + 1);
+    const t = tAtX(x); const ypp = Math.abs(tAtX(x+1) - t) || 1e-6;
+    let step = nice(ypp * 95);
+    const a0 = ago(t);
+    if (step > a0 * .35 && a0 > 1) step = nice(a0 * .35);
+    let tt;
+    if (ago(t) > 20000) { const a = Math.round(ago(t)/step)*step; tt = NOW - a; }
+    else if (step < 1) { const st = step < 1/12 ? 1/12 : nice(step*12)/12; const p = fromDec(t); const months = Math.round((p.y*12 + p.m - 1)/ (st*12)) * (st*12); const yy = Math.floor(months/12), mm = months - yy*12 + 1; tt = decYear(yy, mm, 1); }
+    else tt = Math.round(t/step)*step;
+    if (tt > NOW) continue;
+    const xx = xOf(tt); if (xx < 4 || xx > W - 4) continue;
+    if (out.some(o => Math.abs(o.x - xx) < 70)) continue;
+    out.push({x:xx, label:fmtTick(tt, step)});
+  }
+  return out;
+}
+function draw(){
+  hits = []; spanHits = [];
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = "#0d0c0a"; ctx.fillRect(0,0,W,H);
+  const tk = ticks();
+  ctx.font = "500 11px 'IBM Plex Mono', ui-monospace, monospace"; ctx.textBaseline = "middle";
+  for (const k of tk) {
+    ctx.fillStyle = "rgba(239,230,214,.06)"; ctx.fillRect(Math.round(k.x), AXIS, 1, H - AXIS);
+    ctx.fillStyle = "#8f8676"; ctx.textAlign = "center"; ctx.fillText(k.label, k.x, AXIS/2 + 1);
+  }
+  ctx.fillStyle = "#2c2721"; ctx.fillRect(0, AXIS, W, 1);
+  // present marker
+  const xn = xOf(NOW);
+  if (xn <= W) { ctx.fillStyle = "rgba(226,173,91,.35)"; ctx.fillRect(xn-1, AXIS, 1, H-AXIS); }
+
+  for (const L of layout) {
+    if (L.type === "span") drawSpanLane(L); else drawCatLane(L);
+  }
+  // lane labels
+  ctx.textAlign = "left"; ctx.font = "600 9.5px Inter, system-ui, sans-serif";
+  for (const L of layout) {
+    const name = L.type === "span" ? LANE[L.key].name : CAT[L.key].name;
+    const label = name.toUpperCase();
+    const w = ctx.measureText(label).width + 10;
+    const yy = L.type === "span" ? L.y + Math.min(L.h, SROW)/2 : L.y + L.h/2;
+    if (L.type === "cat") { ctx.fillStyle = "rgba(13,12,10,.82)"; ctx.fillRect(0, yy-7, w+4, 14); ctx.fillStyle = CAT[L.key].color; ctx.globalAlpha = .9; ctx.fillText(label, 6, yy+.5); ctx.globalAlpha = 1; }
+  }
+  // selected cursor
+  if (S.sel) {
+    const x = xOf(S.sel.t);
+    if (x >= -2 && x <= W + 2) {
+      ctx.fillStyle = "#e2ad5b"; ctx.fillRect(Math.round(x)-1, AXIS, 2, H - AXIS);
+      const label = fmtMoment(S.sel);
+      ctx.font = "600 11px Inter, system-ui, sans-serif";
+      const w = ctx.measureText(label).width + 14;
+      let lx = Math.min(Math.max(x - w/2, 2), W - w - 2);
+      ctx.fillStyle = "#e2ad5b"; roundRect(lx, 4, w, AXIS - 8, 4); ctx.fill();
+      ctx.fillStyle = "#1a1307"; ctx.textAlign = "center"; ctx.fillText(label, lx + w/2, AXIS/2 + .5);
+    }
+  }
+}
+function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function drawSpanLane(L){
+  const color = LANE[L.key].color;
+  const list = S.spans.filter(s => s.lane === L.key);
+  ctx.font = "500 10.5px Inter, system-ui, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  list.forEach((s, i) => {
+    let x0 = xOf(s.s), x1 = xOf(s.e == null ? NOW : s.e);
+    if (x1 < 0 || x0 > W) return;
+    const y = L.y + s.row*SROW, h = SROW - 2;
+    const cx0 = Math.max(x0, -2), cx1 = Math.min(x1, W + 2), w = Math.max(1.5, cx1 - cx0);
+    const hov = S.hover && S.hover.id === s.id;
+    ctx.globalAlpha = hov ? .75 : (i % 2 ? .38 : .28);
+    ctx.fillStyle = color; ctx.fillRect(cx0, y, w, h);
+    ctx.globalAlpha = 1;
+    if (S.pictures.has(s.id) || s.img) { ctx.fillStyle = "#e2ad5b"; ctx.fillRect(cx0, y, Math.min(w,3), h); }
+    spanHits.push({x0:cx0, x1:cx0+w, y0:y, y1:y+h, item:s});
+    if (w > 26) {
+      const label = s.name; const tw = ctx.measureText(label).width;
+      ctx.save(); ctx.beginPath(); ctx.rect(cx0, y, w, h); ctx.clip();
+      ctx.fillStyle = "#f3eadb"; const lx = Math.max(cx0, 0) + 5;
+      ctx.fillText(tw + 10 > w ? label : label, lx, y + h/2 + .5);
+      ctx.restore();
+    }
+  });
+}
+function drawCatLane(L){
+  const c = CAT[L.key].color; const cy = L.y + L.h/2;
+  ctx.fillStyle = "rgba(239,230,214,.035)"; ctx.fillRect(0, L.y + L.h - 1, W, 1);
+  const list = (L.key === "mine" ? S.entries : S.events.filter(e => e.cat === L.key));
+  ctx.font = "600 9.5px Inter, system-ui, sans-serif";
+  let lastEnd = ctx.measureText(CAT[L.key].name.toUpperCase()).width + 20; // keep clear of the lane label
+  ctx.font = "500 11.5px Inter, system-ui, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  const vis = [];
+  for (const e of list) { const x = xOf(e.t); if (x >= -10 && x <= W + 10) vis.push([x, e]); }
+  vis.sort((a,b) => a[0] - b[0]);
+  const labels = [];
+  vis.forEach(([x, e], i) => {
+    let label = e.title; if (label.length > 30) label = label.slice(0,29) + "…";
+    const tw = ctx.measureText(label).width;
+    const next = i + 1 < vis.length ? vis[i+1][0] : W + 999;
+    if (x + 9 >= lastEnd && x + 9 + tw + 6 < next && x + 9 + tw < W - 2) { labels.push([x + 9, label, e]); lastEnd = x + 9 + tw + 10; }
+  });
+  for (const [x, e] of vis) {
+    const pic = e.img || e.video || S.pictures.has(e.id) || e.assetId;
+    const hov = S.hover && S.hover.id === e.id;
+    ctx.fillStyle = c;
+    if (pic) { ctx.save(); ctx.translate(x, cy); ctx.rotate(Math.PI/4); ctx.fillRect(-4.5,-4.5,9,9); ctx.restore(); }
+    else { ctx.beginPath(); ctx.arc(x, cy, hov ? 6 : 4.5, 0, Math.PI*2); ctx.fill(); }
+    if (hov) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, cy, 8.5, 0, Math.PI*2); ctx.stroke(); }
+    hits.push({x, y:cy, item:e});
+  }
+  for (const [lx, label, e] of labels) {
+    const hov = S.hover && S.hover.id === e.id;
+    ctx.fillStyle = hov ? "#fff" : "rgba(239,230,214,.86)"; ctx.fillText(label, lx, cy + .5);
+  }
+}
+
+/* ---------- view control ---------- */
+function clampView(v){
+  let span = Math.min(Math.max(v.uL - v.uR, MIN_SPAN), U_MAX - U_MIN);
+  let uL = v.uL, uR = uL - span;
+  if (uL > U_MAX) { uL = U_MAX; uR = uL - span; }
+  if (uR < U_MIN) { uR = U_MIN; uL = uR + span; }
+  return {uL, uR};
+}
+let anim = null;
+function animateTo(target){
+  target = clampView(target);
+  if (reduceMotion) { S.view = target; requestDraw(); return; }
+  const from = {...S.view}, t0 = performance.now(), dur = 650;
+  cancelAnimationFrame(anim);
+  const step = now => {
+    const k = Math.min(1, (now - t0)/dur), e = 1 - Math.pow(1-k, 3);
+    S.view = {uL: from.uL + (target.uL - from.uL)*e, uR: from.uR + (target.uR - from.uR)*e};
+    draw();
+    if (k < 1) anim = requestAnimationFrame(step);
+  };
+  anim = requestAnimationFrame(step);
+}
+function viewForRange(t0, t1){ return {uL: U(t0), uR: Math.max(U_MIN, U(Math.min(t1, NOW)))}; }
+function viewFor(sel){
+  const a = ago(sel.t); let win;
+  if (sel.prec === "deep" || a > 15000) win = Math.max(a*.8, 2000);
+  else if (sel.prec === "century" || sel.prec === "hundreds") win = 240;
+  else if (sel.prec === "decade") win = 40;
+  else if (sel.prec === "day" || sel.prec === "month") win = 4;
+  else win = a > 3000 ? a*.35 : a > 300 ? 160 : 50;
+  const v = viewForRange(sel.t - win/2, sel.t + win/2);
+  if (v.uL - v.uR < .0006) { const c = (v.uL + v.uR)/2; v.uL = c + .0003; v.uR = c - .0003; }
+  return v;
+}
+function zoomBy(f, cx){
+  const span = S.view.uL - S.view.uR; const fx = (cx == null ? W/2 : cx) / W;
+  const uc = S.view.uL - fx*span; const ns = Math.min(Math.max(span*f, MIN_SPAN), U_MAX - U_MIN);
+  S.view = clampView({uL: uc + fx*ns, uR: uc + fx*ns - ns}); requestDraw();
+}
+
+/* pointer interaction */
+const ptrs = new Map(); let dragMoved = 0, pinch = null, lastX = 0;
+cv.addEventListener("pointerdown", e => {
+  cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, {x:e.offsetX, y:e.offsetY});
+  cancelAnimationFrame(anim);
+  if (ptrs.size === 1) { dragMoved = 0; lastX = e.offsetX; cv.classList.add("dragging"); }
+  if (ptrs.size === 2) { const [a,b] = [...ptrs.values()]; pinch = {d: Math.abs(a.x - b.x) || 1, view: {...S.view}, c:(a.x+b.x)/2}; dragMoved = 99; }
+});
+cv.addEventListener("pointermove", e => {
+  if (!ptrs.has(e.pointerId)) { hoverAt(e.offsetX, e.offsetY); return; }
+  ptrs.set(e.pointerId, {x:e.offsetX, y:e.offsetY});
+  if (ptrs.size === 2 && pinch) {
+    const [a,b] = [...ptrs.values()]; const d = Math.abs(a.x - b.x) || 1;
+    const span0 = pinch.view.uL - pinch.view.uR; const fx = pinch.c / W; const uc = pinch.view.uL - fx*span0;
+    const ns = Math.min(Math.max(span0 * pinch.d / d, MIN_SPAN), U_MAX - U_MIN);
+    S.view = clampView({uL: uc + fx*ns, uR: uc + fx*ns - ns}); requestDraw(); return;
+  }
+  const dx = e.offsetX - lastX; lastX = e.offsetX; dragMoved += Math.abs(dx);
+  if (dragMoved > 3) {
+    const span = S.view.uL - S.view.uR; const du = dx / W * span;
+    S.view = clampView({uL: S.view.uL + du, uR: S.view.uR + du}); tip.hidden = true; requestDraw();
+  }
+});
+function endPtr(e){
+  const wasClick = ptrs.size === 1 && dragMoved <= 3 && e.type === "pointerup";
+  ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null;
+  if (!ptrs.size) cv.classList.remove("dragging");
+  if (wasClick) clickAt(e.offsetX, e.offsetY);
+}
+cv.addEventListener("pointerup", endPtr); cv.addEventListener("pointercancel", endPtr);
+cv.addEventListener("pointerleave", () => { if (!ptrs.size) { S.hover = null; tip.hidden = true; requestDraw(); } });
+cv.addEventListener("wheel", e => {
+  e.preventDefault(); cancelAnimationFrame(anim);
+  if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) { const span = S.view.uL - S.view.uR; const du = -e.deltaX / W * span; S.view = clampView({uL:S.view.uL + du, uR:S.view.uR + du}); requestDraw(); return; }
+  zoomBy(Math.exp(e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.0016)), e.offsetX);
+}, {passive:false});
+
+function findHit(x, y){
+  let best = null, bd = 11;
+  for (const h of hits) { const d = Math.hypot(h.x - x, h.y - y); if (d < bd) { bd = d; best = h.item; } }
+  if (best) return best;
+  for (const h of spanHits) if (x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1) return h.item;
+  return null;
+}
+function hoverAt(x, y){
+  const it = findHit(x, y);
+  if ((it && it.id) !== (S.hover && S.hover.id)) { S.hover = it; requestDraw(); }
+  if (it) {
+    tip.replaceChildren(el("b", null, it.title), el("span", null, it.kind === "span" ? fmtRange(it) : fmtItemDate(it)));
+    tip.hidden = false;
+    const tw = tip.offsetWidth; tip.style.left = Math.min(Math.max(4, x + 14), W - tw - 4) + "px"; tip.style.top = Math.min(y + 14, H - 50) + "px";
+    cv.style.cursor = "pointer";
+  } else { tip.hidden = true; cv.style.cursor = ""; }
+}
+function clickAt(x, y){
+  const it = findHit(x, y);
+  if (it) { openItem(it); return; }
+  const t = tAtX(x); const ypp = Math.abs(tAtX(x+1) - t);
+  let sel;
+  if (ago(t) > 15000) { const a = Number(sig(ago(t), 2)); sel = {t: NOW - a, prec:"deep"}; }
+  else if (ypp < 0.02 && t > 1) { const p = fromDec(t); sel = {t: decYear(p.y,p.m,p.d), prec:"day", y:p.y, m:p.m, d:p.d}; }
+  else { const step = ypp > 20 ? 100 : ypp > 2 ? 10 : 1; sel = {t: Math.round(t/step)*step + .5, prec:"year"}; if (sel.t > NOW) sel.t = NOW; }
+  select(sel, false);
+}
+
+/* ---------- moment panel ---------- */
+function covering(lane, t){ return S.spans.filter(s => s.lane === lane && s.s <= t && (s.e == null ? NOW : s.e) >= t); }
+function select(sel, move){
+  S.sel = sel;
+  if (move) animateTo(viewFor(sel)); else requestDraw();
+  renderMoment();
+  resetAsk();
+}
+function itemButton(it, extra){
+  const c = it.kind === "span" ? LANE[it.lane].color : CAT[it.cat].color;
+  return el("li", null, el("button", {type:"button", style:"--c:" + c, onclick: () => openItem(it)},
+    el("i"), el("span", {class:"nt"}, it.title), el("span", {class:"nd"}, extra != null ? extra : fmtItemDate(it))));
+}
+function renderMoment(){
+  const sel = S.sel; if (!sel) return;
+  $("mDate").textContent = fmtMoment(sel);
+  const a = ago(sel.t);
+  $("mAgo").textContent = a >= 1e6 ? "Earth is " + sig((sel.t + 4.54e9 < 0 ? 0 : (sel.t + 4.54e9))/1e9 || 0, 3) + " billion years old" : (sel.prec === "day" || a < 1 ? (a < 1 ? "Within the last year" : fmtN(a) + " years ago") : fmtN(a) + " years ago");
+  if (sel.t < -4.54e9) $("mAgo").textContent = "Earth does not exist yet";
+  const crumbs = $("mCrumbs"); crumbs.replaceChildren();
+  ["eon","era","period","epoch"].forEach(k => {
+    const s = covering(k, sel.t)[0]; if (!s) return;
+    if (crumbs.childNodes.length) crumbs.append(el("span", {class:"sep"}, "›"));
+    crumbs.append(el("span", null, LANE[k].name + " ", el("b", null, s.name)));
+  });
+  const alive = $("mAlive"); alive.replaceChildren();
+  const living = ["age","realm","style"].flatMap(k => covering(k, sel.t));
+  if (!living.length) alive.append(el("p", {class:"empty"}, sel.t < -3.3e6 ? "No human cultures yet. See the deep-time bands above." : "Nothing recorded in the atlas for this moment."));
+  for (const s of living) alive.append(el("button", {type:"button", onclick: () => openItem(s)}, s.name, el("small", null, LANE[s.lane].name)));
+  // on this day
+  const od = $("mOnDay"); od.replaceChildren();
+  if (sel.prec === "day") {
+    const md = "-" + String(sel.m).padStart(2,"0") + "-" + String(sel.d).padStart(2,"0");
+    const same = allEvents().filter(e => e.d && e.d.endsWith(md));
+    if (same.length) { od.append(el("div", {class:"sub"}, "On " + sel.d + " " + MONTHS[sel.m-1] + " in history"), el("ul", {class:"near"}, same.map(e => itemButton(e)))); }
+  }
+  // nearby
+  const near = $("mNear"); near.replaceChildren();
+  const win = Math.max(12, a * .45);
+  const evs = allEvents().filter(e => !S.hidden.has(e.cat)).map(e => [Math.abs(e.t - sel.t), e]).filter(([d]) => d <= win).sort((x,y) => x[0]-y[0]).slice(0, 14).map(x => x[1]).sort((x,y) => x.t - y.t);
+  if (!evs.length) near.append(el("li", null, el("p", {class:"empty"}, "No atlas milestones close to this moment. Ask Claude for the full picture.")));
+  for (const e of evs) near.append(itemButton(e, fmtDelta(e.t - sel.t)));
+  renderPapers();
+}
+function renderPapers(){
+  const box = $("mPapers"); const sel = S.sel; if (!box || !sel) return;
+  const year = Math.floor(sel.t);
+  box.hidden = year < 1450;
+  if (year < 1450) return;
+  const label = sel.prec === "day" ? "from that fortnight" : sel.prec === "month" ? "from that month" : sel.prec === "year" ? "from " + year : "from " + year;
+  $("mPapersHead").textContent = "Read the papers " + label;
+  $("mPapersNote").textContent = paperNote(year);
+  const item = sel.prec === "century" || sel.prec === "hundreds" || sel.prec === "decade" ? {t: sel.t, prec:"year"} : sel;
+  $("mPapersList").replaceChildren(...paperLinks(item, $("paperQ").value.trim()));
+}
+
+/* ---------- popup ---------- */
+let lastFocus = null, modalItem = null, modalCtl = null;
+function picUrl(it){
+  const p = it.assetId ? {id: it.assetId, kind: it.assetKind} : S.pictures.get(it.id);
+  if (p && p.id) return {src: "/_blob/" + p.id, mine: true, video: p.kind === "video"};
+  if (it.video) return {src: it.video, mine: false, video: true};
+  if (it.img) return {src: it.img, mine: false};
+  return null;
+}
+const MEDIA_ACCEPT = "image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm";
+const kindOf = f => /^video\//.test(f.type) ? "video" : "image";
+function openItem(it){
+  modalItem = it; lastFocus = document.activeElement;
+  renderModal();
+  $("overlay").hidden = false;
+  const close = $("modal").querySelector(".x"); close && close.focus();
+}
+function closeModal(){
+  if (modalCtl) { modalCtl.abort(); modalCtl = null; }
+  $("overlay").hidden = true; modalItem = null; if (lastFocus && lastFocus.focus) lastFocus.focus();
+}
+$("overlay").addEventListener("click", e => { if (e.target === $("overlay")) closeModal(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("overlay").hidden) closeModal(); });
+
+function renderModal(){
+  const it = modalItem; if (!it) return;
+  const m = $("modal"); m.replaceChildren();
+  const isSpan = it.kind === "span";
+  const color = isSpan ? LANE[it.lane].color : CAT[it.cat].color;
+  m.style.setProperty("--c", color);
+  m.append(el("button", {class:"x", type:"button", "aria-label":"Close", onclick: closeModal}, "×"));
+  const pic = picUrl(it);
+  const fig = el("div", {class:"modal-fig"});
+  if (pic) {
+    const media = pic.video
+      ? el("video", {src: pic.src, controls: true, playsinline: true, preload: "metadata", "aria-label": "Video for " + it.title, style: "display:block;width:100%;max-height:52vh;background:#000"})
+      : el("img", {src: pic.src, alt: "Picture for " + it.title});
+    media.addEventListener("error", () => { media.replaceWith(el("div", {class:"plate"}, el("span", null, pic.video ? "Video unavailable" : "Picture unavailable"))); });
+    fig.append(media, el("span", {class:"tag"}, pic.mine ? (pic.video ? "Added video" : "Added picture") : (pic.video ? "Your video" : "Your image · AI")));
+  } else fig.append(el("div", {class:"plate"}, el("span", null, isSpan ? LANE[it.lane].name : CAT[it.cat].name)));
+  m.append(fig);
+  const body = el("div", {class:"modal-body"});
+  body.append(
+    el("div", {class:"eyebrow", style:"color:" + color}, (isSpan ? LANE[it.lane].name : CAT[it.cat].name) + " · " + (isSpan ? fmtRange(it) : fmtItemDate(it))),
+    el("h3", {id:"modalTitle"}, it.title),
+    el("div", {class:"prose"}, el("p", null, it.text || ""))
+  );
+  const more = el("div", {class:"prose", id:"moreOut"});
+  const status = el("div", {class:"status", id:"moreStatus"});
+  const actions = el("div", {class:"modal-actions"});
+  actions.append(el("button", {class:"btn", type:"button", onclick: () => {
+    closeModal();
+    if (isSpan) { animateTo(viewForRange(it.s - (((it.e==null?NOW:it.e) - it.s)*.15), (it.e==null?NOW:it.e) + (((it.e==null?NOW:it.e) - it.s)*.15))); S.sel = {t:(it.s + (it.e==null?NOW:it.e))/2, prec: it.s < -15000 ? "deep" : "year"}; renderMoment(); resetAsk(); }
+    else { const sel = it.d ? (() => { const [y,mo,d] = it.d.split("-").map(Number); return {t:it.t, prec:"day", y, m:mo, d}; })() : {t:it.t, prec: it.t < -15000 ? "deep" : "year"}; select(sel, true); }
+    $("stage").scrollIntoView({behavior: reduceMotion ? "auto" : "smooth", block:"center"});
+  }}, "Go to this moment"));
+  if (S.sample) actions.append(el("button", {class:"btn primary", type:"button", id:"moreBtn", onclick: () => tellMore(it, more, status)}, "Tell me more"));
+  const canPic = S.assets && S.db && it.kind !== "entry";
+  if (canPic) {
+    actions.append(el("button", {class:"btn", type:"button", onclick: () => pickPicture(it)}, S.pictures.has(it.id) ? "Replace picture or video" : "Add a picture or video"));
+    if (S.pictures.has(it.id)) actions.append(el("button", {class:"btn ghost", type:"button", onclick: () => removePicture(it)}, "Remove it"));
+  }
+  if (it.kind === "entry" && S.db) actions.append(el("button", {class:"btn ghost", type:"button", onclick: () => confirmDeleteEntry(it, body)}, "Delete entry"));
+  const papersYear = isSpan ? Math.floor(it.s) : Math.floor(it.t);
+  let papers = null;
+  if (papersYear >= 1450 && !(isSpan && it.s < 1450)) {
+    const q = it.q || (isSpan ? it.name : "");
+    papers = el("div", {class:"papers"},
+      el("div", {class:"sub"}, "Read the papers" + (it.d ? " from that fortnight" : isSpan ? " from " + papersYear : " from " + papersYear)),
+      el("p", {class:"small"}, paperNote(papersYear) + (q ? " Searching for: " + q + "." : "")),
+      el("ul", {class:"near"}, paperLinks(isSpan ? {t: it.s, prec:"year"} : it, q)));
+  }
+  body.append(actions, el("div", {id:"confirmSlot"}), status, more, papers);
+  m.append(body);
+}
+
+/* ---------- Claude ---------- */
+const FOCUS = {
+  everything: "Cover the whole world at that moment, across politics, war, daily life, ideas, art, music, science, money, disease and nature.",
+  daily: "Focus on everyday life: food, homes, work, clothes, children, travel, prices, smells and sounds, for ordinary people in several parts of the world.",
+  newspaper: "Write it as the front pages of that day or week. Use only real, documented events and say which places had newspapers. If there were no newspapers yet, say so and describe how news travelled instead, then give the real 'headlines' people would have talked about.",
+  power: "Focus on rulers, states, laws and political struggles.",
+  war: "Focus on wars, battles, armies and weapons.",
+  science: "Focus on science, invention and technology.",
+  art: "Focus on art, architecture, music, literature and entertainment.",
+  economy: "Focus on money, trade, prices, work and markets.",
+  disease: "Focus on disease, medicine, health and how long people lived.",
+  nature: "Focus on climate, landscapes, animals and plants, and how people related to nature.",
+  strange: "Focus on strange, surprising, funny or little-known true stories from that moment."
+};
+function contextFor(t){
+  const geo = ["eon","era","period","epoch"].map(k => (covering(k,t)[0]||{}).name).filter(Boolean).join(" > ");
+  const realms = ["age","realm","style"].flatMap(k => covering(k,t)).map(s => s.name).join(", ");
+  const a = ago(t); const win = Math.max(15, a*.3);
+  const near = S.events.filter(e => Math.abs(e.t - t) <= win).slice(0, 18).map(e => fmtItemDate(e) + ": " + e.title).join("; ");
+  return "Geologic time: " + (geo || "before Earth") + ". Cultures and eras alive: " + (realms || "none") + ". Nearby milestones in the atlas: " + (near || "none") + ".";
+}
+const RULES = "Write in plain, vivid English for a curious adult who loves the history schools leave out. Use only these markdown features: lines starting with '## ' for short section headings, lines starting with '- ' for bullets, and **bold** for a few key names. No tables, no other headings. Rules: never invent events, people, numbers or quotes; when a date is approximate say 'around'; when historians disagree or evidence is thin, say so briefly; prefer well-documented but lesser-known details over famous ones. If the moment is before humans existed, describe the planet itself: sky, air, oceans, continents, climate and life.";
+function buildMomentPrompt(sel, focus, q){
+  return "A reader of an interactive history atlas picked this moment: " + fmtMoment(sel) +
+    (ago(sel.t) < 1e6 && sel.t > -10000 ? " (" + fmtN(ago(sel.t)) + " years before today, " + today.toDateString() + ")" : "") + ".\n" +
+    "Precision of the moment: " + sel.prec + ".\n" + contextFor(sel.t) + "\n\n" + FOCUS[focus] + "\n" +
+    (q ? "They also ask: " + q + "\n" : "") +
+    "\nGive 350 to 600 words in 4 to 7 short sections. End with a section '## Strange but true' containing one or two surprising, well-documented facts from that time.\n\n" + RULES;
+}
+function buildItemPrompt(it){
+  const when = it.kind === "span" ? fmtRange(it) : fmtItemDate(it);
+  return "In an interactive history atlas, a reader opened: \"" + it.title + "\" (" + when + "). The atlas says: " + (it.text || "") + "\n\n" +
+    "Tell them more in 250 to 450 words, with sections such as: ## What happened, ## Why it matters, ## What people at the time saw or said, ## Myths and misunderstandings, ## A detail most people never hear. Skip any section that doesn't fit.\n\n" + RULES;
+}
+function renderMd(target, text){
+  const frag = document.createDocumentFragment(); let ul = null;
+  const inline = (node, s) => { s.split(/\*\*/).forEach((part, i) => { if (part) node.append(i % 2 ? el("strong", null, part) : document.createTextNode(part)); }); };
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line) { ul = null; continue; }
+    if (/^#{1,4}\s/.test(line)) { ul = null; const h = el("h3"); inline(h, line.replace(/^#{1,4}\s+/,"")); frag.append(h); continue; }
+    if (/^[-*•]\s+/.test(line)) { if (!ul) { ul = el("ul"); frag.append(ul); } const li = el("li"); inline(li, line.replace(/^[-*•]\s+/,"")); ul.append(li); continue; }
+    ul = null; const p = el("p"); inline(p, line); frag.append(p);
+  }
+  target.replaceChildren(frag);
+}
+function errCopy(e){
+  const c = e && e.code;
+  if (c === "not_granted" || c === "sampling_disabled" || c === "not_declared" || c === "capability_disabled" || c === "capability_removed") return "Claude isn't available on this page for you.";
+  if (c === "rate_limited") return e.reason === "usage_limit" ? "You've reached your Claude usage limit. Try again later." : "Too many questions at once. Wait a moment and try again.";
+  if (c === "session_expired") return "Your session expired. Sign in to Claude again.";
+  if (c === "refused") return "Claude declined that question. Try asking it another way.";
+  if (c === "cancelled") return "Stopped.";
+  if (c === "no_key") return "Add your Anthropic API key in Claude settings (top right) to ask questions.";
+  if (c === "invalid_key") return "Your API key was rejected. Check it in Claude settings.";
+  if (c === "offline") return "Can't reach Claude. Check your internet connection.";
+  if (c === "api_error" && e.message) return "Claude API: " + String(e.message).slice(0, 200);
+  return "Something went wrong reaching Claude. Try again.";
+}
+let askCtl = null;
+function resetAsk(){
+  if (askCtl) { askCtl.abort(); askCtl = null; }
+  $("askOut").replaceChildren(); $("askStatus").textContent = ""; $("askStop").hidden = true;
+  $("askBtn").textContent = S.sel ? "Ask about " + fmtMoment(S.sel) : "Ask Claude";
+  $("askBtn").disabled = !S.sample;
+}
+async function ask(){
+  if (!S.sample || !S.sel) return;
+  if (askCtl) askCtl.abort();
+  const ctl = askCtl = new AbortController();
+  const out = $("askOut"), st = $("askStatus");
+  out.replaceChildren(); st.textContent = "Thinking…"; $("askStop").hidden = false; $("askBtn").disabled = true;
+  let pending = null, raf = 0;
+  try {
+    const res = await S.sample(buildMomentPrompt(S.sel, $("askFocus").value, $("askQ").value.trim()), {
+      signal: ctl.signal,
+      onText: ({text}) => { pending = text; st.textContent = "Writing…"; if (!raf) raf = requestAnimationFrame(() => { raf = 0; renderMd(out, pending); }); }
+    });
+    cancelAnimationFrame(raf); renderMd(out, res.text);
+    st.textContent = res.truncated ? "The answer was cut short. Ask about something narrower." : "From Claude · check important details";
+  } catch (e) {
+    cancelAnimationFrame(raf);
+    if (e && e.text && e.code !== "refused") renderMd(out, e.text); else if (e && e.code === "refused") out.replaceChildren();
+    st.textContent = errCopy(e);
+    if (e && ["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"].includes(e.code)) { S.sample = null; }
+  } finally {
+    if (askCtl === ctl) askCtl = null;
+    $("askStop").hidden = true; $("askBtn").disabled = !S.sample;
+  }
+}
+$("askBtn").addEventListener("click", ask);
+$("paperQ").addEventListener("input", () => renderPapers());
+$("askStop").addEventListener("click", () => askCtl && askCtl.abort());
+
+async function tellMore(it, out, st){
+  if (!S.sample) return;
+  if (modalCtl) modalCtl.abort();
+  const ctl = modalCtl = new AbortController();
+  const btn = $("moreBtn"); if (btn) btn.disabled = true;
+  st.textContent = "Thinking…"; out.replaceChildren();
+  let pending = null, raf = 0;
+  try {
+    const res = await S.sample(buildItemPrompt(it), { signal: ctl.signal, onText: ({text}) => { pending = text; st.textContent = "Writing…"; if (!raf) raf = requestAnimationFrame(() => { raf = 0; renderMd(out, pending); }); } });
+    cancelAnimationFrame(raf); renderMd(out, res.text); st.textContent = "From Claude · check important details";
+  } catch (e) {
+    cancelAnimationFrame(raf);
+    if (e && e.text && e.code !== "refused") renderMd(out, e.text);
+    if (e && e.code !== "cancelled") st.textContent = errCopy(e);
+  } finally { if (modalCtl === ctl) modalCtl = null; const b = $("moreBtn"); if (b) b.disabled = false; }
+}
+
+/* ---------- pictures & entries ---------- */
+let pickFor = null;
+function pickPicture(it){ pickFor = it; $("filePick").value = ""; $("filePick").click(); }
+$("filePick").addEventListener("change", async () => {
+  const f = $("filePick").files[0]; const it = pickFor; pickFor = null;
+  if (!f || !it || !S.assets || !S.db) return;
+  const st = $("moreStatus"); if (st) st.textContent = "Uploading…";
+  try {
+    const kind = kindOf(f);
+    const up = await S.assets.upload(f, f.type ? undefined : {type:"image/jpeg"});
+    await S.db.doc("pictures/" + it.id).set({assetId: up.id, kind, title: it.title, at: new Date().toISOString()});
+    S.pictures.set(it.id, {id: up.id, kind});
+    if (modalItem && modalItem.id === it.id) renderModal();
+    requestDraw();
+  } catch (e) {
+    const st2 = $("moreStatus");
+    const msg = e && e.code === "too_large" ? "That file is too large." : e && e.code === "unsupported_type" ? "Use a PNG, JPEG, WebP or GIF picture, or an MP4 or WebM video." : e && e.code === "permission_denied" ? "You don't have permission to add pictures to this atlas." : "The file couldn't be saved. Try again.";
+    if (st2) st2.textContent = msg;
+  }
+});
+async function removePicture(it){
+  try { await S.db.doc("pictures/" + it.id).delete(); S.pictures.delete(it.id); renderModal(); requestDraw(); }
+  catch (e) { const st = $("moreStatus"); if (st) st.textContent = "The picture couldn't be removed. Try again."; }
+}
+function confirmDeleteEntry(it, body){
+  const slot = body.querySelector("#confirmSlot"); slot.replaceChildren(
+    el("div", {class:"confirm"}, "Delete this entry for everyone?",
+      el("button", {class:"btn", type:"button", style:"border-color:var(--danger);color:var(--danger)", onclick: async () => {
+        try { await S.db.doc("entries/" + it.docId).delete(); closeModal(); } catch (e) { slot.replaceChildren(el("p", {class:"err"}, "Couldn't delete it. Try again.")); }
+      }}, "Delete"),
+      el("button", {class:"btn ghost", type:"button", onclick: () => slot.replaceChildren()}, "Cancel")));
+}
+function openEntryForm(){
+  lastFocus = document.activeElement; modalItem = null;
+  const m = $("modal"); m.replaceChildren(); m.style.setProperty("--c", "#e2ad5b");
+  const catSel = el("select", {id:"fCat"}, CATS.filter(([k]) => k !== "mine").map(([k,n]) => el("option", {value:k}, n)));
+  catSel.value = "daily";
+  const err = el("p", {class:"err", role:"status"});
+  const form = el("form", {class:"modal-body"},
+    el("div", {class:"eyebrow"}, "Add to the atlas"),
+    el("h3", {id:"modalTitle"}, "A new entry"),
+    el("div", {class:"field-row"},
+      el("div", {class:"field"}, el("label", {for:"fDate"}, "When"), el("input", {id:"fDate", type:"text", required:true, placeholder:"e.g. 3 March 1876 or 1200s", value: S.sel ? fmtMoment(S.sel).replace(/ CE$/,"") : ""})),
+      el("div", {class:"field"}, el("label", {for:"fCat"}, "Subject"), catSel)),
+    el("div", {class:"field"}, el("label", {for:"fTitle"}, "Title"), el("input", {id:"fTitle", type:"text", required:true, maxlength:"90", placeholder:"What happened?"})),
+    el("div", {class:"field"}, el("label", {for:"fText"}, "Notes"), el("textarea", {id:"fText", maxlength:"2000", placeholder:"Details, sources, why it matters to you"})),
+    S.assets ? el("div", {class:"field"}, el("label", {for:"fPic"}, "Picture or video (optional)"), el("input", {id:"fPic", type:"file", accept: MEDIA_ACCEPT})) : null,
+    err,
+    el("div", {class:"modal-actions"}, el("button", {class:"btn primary", type:"submit"}, "Save entry"), el("button", {class:"btn ghost", type:"button", onclick: closeModal}, "Cancel"))
+  );
+  form.addEventListener("submit", async ev => {
+    ev.preventDefault(); err.textContent = "";
+    const p = parseQuery(form.querySelector("#fDate").value);
+    if (!p || p.error) { err.textContent = p && p.error ? p.error : "Couldn't read that date. Try '15 June 1215', '500 BC' or '66 million years ago'."; return; }
+    const title = form.querySelector("#fTitle").value.trim(); if (!title) { err.textContent = "Give the entry a title."; return; }
+    const btn = form.querySelector("button[type=submit]"); btn.disabled = true; btn.textContent = "Saving…";
+    try {
+      let assetId = null; const fp = form.querySelector("#fPic");
+      let assetKind = null;
+      if (fp && fp.files[0]) { const up = await S.assets.upload(fp.files[0]); assetId = up.id; assetKind = kindOf(fp.files[0]); }
+      const doc = {t: p.t, prec: p.prec, title, text: form.querySelector("#fText").value.trim(), topic: catSel.value, at: new Date().toISOString()};
+      if (p.prec === "day") doc.d = String(p.y).padStart(4,"0") + "-" + String(p.m).padStart(2,"0") + "-" + String(p.d).padStart(2,"0");
+      if (assetId) { doc.assetId = assetId; doc.assetKind = assetKind; }
+      await S.db.collection("entries").add(doc);
+      closeModal();
+    } catch (e) {
+      btn.disabled = false; btn.textContent = "Save entry";
+      err.textContent = e && e.code === "permission_denied" ? "You don't have permission to add entries to this atlas." : "The entry couldn't be saved. Try again.";
+    }
+  });
+  m.append(el("button", {class:"x", type:"button", "aria-label":"Close", onclick: closeModal}, "×"), form);
+  $("overlay").hidden = false; form.querySelector("#fTitle").focus();
+}
+$("addEntryBtn").addEventListener("click", openEntryForm);
+function renderMine(){
+  const ul = $("mineList"); ul.replaceChildren();
+  if (!S.entries.length) ul.append(el("li", null, el("p", {class:"empty"}, S.db ? "No entries yet. Use 'Add an entry' to put your first event, family story or picture on the timeline." : "Sign in to Claude to add your own entries.")));
+  for (const e of S.entries) ul.append(itemButton(e));
+}
+
+/* ---------- capabilities ---------- */
+async function connect(){
+  if (!window.claude || !window.claude.use) {
+    resetAsk(); renderMine();
+    const site = window.ATLAS_SITE;
+    if (site && site.download) {
+      $("askStatus").replaceChildren("Ask Claude works in the free Windows app. ", el("a", {href: site.download, target:"_blank", rel:"noopener", style:"color:var(--gold)"}, "Download it"));
+      $("mineNote").textContent = "Adding your own entries, pictures and videos works in the Windows app.";
+    } else $("askStatus").textContent = "Open this atlas in Claude to ask questions.";
+    return;
+  }
+  claude.use("sample").then(s => { S.sample = s; resetAsk(); if (!s) $("askStatus").textContent = "Asking Claude isn't available in this view."; if (modalItem) renderModal(); });
+  claude.use("assets").then(a => { S.assets = a; if (modalItem) renderModal(); });
+  const db = await claude.use("db");
+  S.db = db;
+  if (!db) { renderMine(); return; }
+  $("addEntryBtn").hidden = false;
+  let loaded = false; const timer = setTimeout(() => { if (!loaded) $("mineNote").textContent = "Your saved entries can't be reached right now. They'll appear when the connection returns."; }, 10000);
+  db.collection("pictures").onSnapshot(snap => {
+    S.pictures = new Map(snap.docs.filter(d => d.exists).map(d => { const x = d.data(); return [d.id, {id: String(x.assetId || ""), kind: x.kind === "video" ? "video" : "image"}]; }).filter(([,v]) => /^[0-9a-f]{32}$/.test(v.id)));
+    requestDraw(); if (modalItem) renderModal();
+  }, () => {});
+  db.collection("entries").onSnapshot(snap => {
+    if (!snap.metadata.fromCache) { loaded = true; clearTimeout(timer); }
+    S.entries = snap.docs.filter(d => d.exists).map(d => {
+      const x = d.data(); const t = Number(x.t);
+      if (!isFinite(t)) return null;
+      const assetId = /^[0-9a-f]{32}$/.test(String(x.assetId || "")) ? String(x.assetId) : null;
+      return {kind:"entry", id:"u-" + d.id, docId:d.id, t, cat:"mine", topic:String(x.topic||""), title:String(x.title || "Untitled").slice(0,120), text:String(x.text || "").slice(0,4000), d: /^\d{4}-\d{2}-\d{2}$/.test(String(x.d||"")) ? String(x.d) : null, assetId, assetKind: x.assetKind === "video" ? "video" : "image"};
+    }).filter(Boolean).sort((a,b) => a.t - b.t);
+    renderMine(); resize(); if (S.sel) renderMoment();
+  }, () => { loaded = true; clearTimeout(timer); $("mineNote").textContent = "Your entries couldn't be loaded."; });
+}
+
+/* ---------- controls ---------- */
+const EXAMPLES = [["Big Bang","big bang"],["4.4 billion years ago","4.4 billion years ago"],["66 million years ago","66 million years ago"],["300,000 years ago","300000 years ago"],["2560 BC","2560 BC"],["1605: first newspaper","1605"],["15 June 1215","15 June 1215"],["30 Sep 1888","30 September 1888"],["15 Jan 1919","15 January 1919"],["27 Feb 1933","27 February 1933"],["Today","today"]];
+for (const [label, q] of EXAMPLES) $("examples").append(el("button", {class:"chip", type:"button", onclick: () => { $("q").value = label; go(q); }}, label));
+$("examples").append(el("button", {class:"chip feature", type:"button", onclick: () => { goEra(); $("era").scrollIntoView({behavior: reduceMotion ? "auto" : "smooth"}); }}, "Werwulf era: England 1200s"));
+function go(q){
+  const p = parseQuery(q);
+  if (!p) { $("qErr").textContent = "Couldn't read that date. Try '15 June 1215', '15/06/1215', '1919', '500 BC', '13th century' or '66 million years ago'."; return; }
+  if (p.error) { $("qErr").textContent = p.error; return; }
+  $("qErr").textContent = ""; select(p, true);
+}
+$("searchForm").addEventListener("submit", e => { e.preventDefault(); go($("q").value); });
+const PRESETS = [["All of time",[-13.8e9, NOW]],["Earth",[-4.6e9, NOW]],["Animals",[-600e6, NOW]],["Humans",[-7e6, NOW]],["Civilisation",[-10000, NOW]],["Last 1,000 years",[1000, NOW]],["Last 200 years",[1825, NOW]]];
+for (const [label, [a,b]] of PRESETS) $("presets").append(el("button", {class:"btn", type:"button", onclick: () => animateTo(viewForRange(a, b))}, label));
+$("zoomIn").addEventListener("click", () => zoomBy(1/1.6)); $("zoomOut").addEventListener("click", () => zoomBy(1.6));
+function goEra(){ select({t:1250.5, prec:"hundreds", n:1200}, false); animateTo(viewForRange(1140, 1360)); }
+$("eraGo").addEventListener("click", () => { goEra(); $("stage").scrollIntoView({behavior: reduceMotion ? "auto" : "smooth", block:"center"}); });
+function renderLegend(){
+  const lg = $("legend"); lg.replaceChildren();
+  for (const [k,n,c] of CATS) {
+    if (k === "mine") continue;
+    lg.append(el("button", {class:"lg", type:"button", style:"--c:" + c, "aria-pressed": String(!S.hidden.has(k)), onclick: () => {
+      if (S.hidden.has(k)) S.hidden.delete(k); else S.hidden.add(k);
+      try { localStorage.setItem("atlas.hidden", JSON.stringify([...S.hidden])); } catch(e) {}
+      renderLegend(); resize(); renderMoment();
+    }}, el("i"), n));
+  }
+}
+function renderEra(){
+  const eng = S.events.filter(e => e.f === 1).concat(S.spans.filter(s => s.f === 1 && s.kind === "event"));
+  $("eraEngland").replaceChildren(...eng.map(e => itemButton(e)));
+  $("eraWolves").replaceChildren(...S.events.filter(e => e.f === 2).map(e => itemButton(e)));
+}
+
+/* ---------- website version: download button ---------- */
+(function siteMode(){
+  const site = window.ATLAS_SITE; if (!site || !site.download) return;
+  const row = $("searchForm");
+  row.append(el("p", {class:"small", style:"margin:4px 0 0"}, "Want Claude, your own pictures and entries? ",
+    el("a", {href: site.download, target:"_blank", rel:"noopener", class:"btn primary", style:"display:inline-block;margin-left:6px;text-decoration:none;padding:6px 12px"}, "Download for Windows")));
+})();
+
+/* ---------- opening video ---------- */
+(function intro(){
+  const v = $("introVideo"), b = $("introToggle"); if (!v || !b) return;
+  const set = playing => { b.textContent = playing ? "Pause" : "Play"; b.setAttribute("aria-pressed", String(!playing)); };
+  if (reduceMotion) { v.removeAttribute("autoplay"); v.pause(); set(false); }
+  b.addEventListener("click", () => { if (v.paused) { const p = v.play(); if (p && p.catch) p.catch(() => set(false)); set(true); } else { v.pause(); set(false); } });
+  v.addEventListener("error", () => { b.hidden = true; }, true);
+})();
+
+/* ---------- boot ---------- */
+(async function boot(){
+  renderLegend();
+  try { await load(); }
+  catch (e) { $("mDate").textContent = "The timeline data couldn't load."; return; }
+  new ResizeObserver(() => resize()).observe(stage);
+  resize();
+  renderEra();
+  select({t: decYear(1215,6,15), prec:"day", y:1215, m:6, d:15}, false);
+  connect();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => requestDraw());
+})();
+})();
+</script>
+
+</body></html>

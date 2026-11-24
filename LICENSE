@@ -1,0 +1,16 @@
+Atlas of All Time
+Copyright (c) 2026 Valeria. All rights reserved.
+
+Made with Claude (Anthropic).
+
+This repository is published so people can view and use the Atlas of All Time
+website and download the Windows app for personal use. No licence is granted to
+copy, modify, redistribute, republish or create derivative works from the code,
+design, written content, images or video in this repository, in whole or in
+part, without written permission from the copyright holder.
+
+Historical facts are not owned by anyone. You are free to make your own
+timeline; please don't copy this one.
+
+The Windows app connects to Anthropic's API with each user's own API key.
+Use of Claude is subject to Anthropic's own terms.

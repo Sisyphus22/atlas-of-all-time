@@ -1,0 +1,57 @@
+{
+  "name": "atlas-of-all-time",
+  "productName": "Atlas of All Time",
+  "version": "0.1.0",
+  "description": "An interactive timeline from the Big Bang to today, with Claude built in.",
+  "author": "Atlas of All Time",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "page": "node scripts/build-page.js",
+    "start": "npm run page && electron .",
+    "dist": "npm run page && electron-builder --win"
+  },
+  "build": {
+    "appId": "app.atlasofalltime.desktop",
+    "productName": "Atlas of All Time",
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Atlas of All Time"
+    }
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.13.0"
+  },
+  "devDependencies": {
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0"
+  },
+  "allowScripts": {
+    "electron-winstaller@5.4.0": true
+  }
+}
