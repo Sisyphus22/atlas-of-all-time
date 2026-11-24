@@ -1,19 +1,27 @@
 {
   "name": "atlas-of-all-time",
   "productName": "Atlas of All Time",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An interactive timeline from the Big Bang to today, with Claude built in.",
-  "author": "Atlas of All Time",
+  "author": {
+    "name": "Valeria",
+    "email": "29075642+Sisyphus22@users.noreply.github.com"
+  },
+  "homepage": "https://sisyphus22.github.io/atlas-of-all-time/",
   "private": true,
   "main": "main.js",
   "scripts": {
     "page": "node scripts/build-page.js",
     "start": "npm run page && electron .",
-    "dist": "npm run page && electron-builder --win"
+    "dist": "npm run page && electron-builder --win",
+    "dist:mac": "npm run page && electron-builder --mac",
+    "dist:linux": "npm run page && electron-builder --linux"
   },
   "build": {
     "appId": "app.atlasofalltime.desktop",
     "productName": "Atlas of All Time",
+    "copyright": "Copyright © 2026 Valeria. All rights reserved.",
+    "artifactName": "Atlas-of-All-Time-${version}-${os}-${arch}.${ext}",
     "files": [
       "main.js",
       "preload.js",
@@ -42,6 +50,30 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Atlas of All Time"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "public.app-category.education",
+      "icon": "build/icon.png",
+      "identity": "-"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Education",
+      "icon": "build/icon.png",
+      "synopsis": "Interactive timeline from the Big Bang to today",
+      "maintainer": "Valeria <29075642+Sisyphus22@users.noreply.github.com>"
     }
   },
   "dependencies": {

@@ -128,7 +128,7 @@
       h("div", { class: "modal-actions" }, h("button", { class: "btn", type: "button", onclick: () => A.openKeysPage() }, "Open the Anthropic Console")),
       h("div", { class: "field" }, h("label", { for: "apiKey" }, "API key"), key),
       h("div", { class: "field" }, h("label", { for: "apiModel" }, "Model"), model),
-      h("p", { class: "small" }, "The key is encrypted with your Windows account and stays on this computer. It's only sent to Anthropic."),
+      h("p", { class: "small" }, "The key is encrypted by your computer's secure storage and stays on this computer. It's only sent to Anthropic."),
       status,
       h("div", { class: "modal-actions" }, save,
         s.hasKey && !s.fromEnv ? h("button", { class: "btn ghost", type: "button", onclick: async () => { await A.clearKey(); await refreshGear(); close(); } }, "Remove key") : null,

@@ -1,9 +1,10 @@
 // Atlas of All Time — desktop shell.
 // Serves the Atlas page from ./app over a private atlas:// scheme, keeps the
 // user's pictures, videos and entries on this computer, and calls Claude with
-// the user's own Anthropic API key (stored encrypted with Windows DPAPI).
+// the user's own Anthropic API key (stored encrypted by the operating system:
+// DPAPI on Windows, Keychain on macOS, the desktop keyring on Linux).
 
-const { app, BrowserWindow, ipcMain, protocol, net, safeStorage, shell } = require("electron");
+const { app, BrowserWindow, Menu, ipcMain, protocol, net, safeStorage, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
@@ -106,7 +107,7 @@ ipcMain.handle("settings:get", () => publicSettings());
 ipcMain.handle("settings:setKey", async (_e, key) => {
   key = String(key || "").trim();
   if (!key) return { ok: false, message: "Paste a key first." };
-  if (!safeStorage.isEncryptionAvailable()) return { ok: false, message: "Windows can't encrypt the key on this account, so it wasn't saved." };
+  if (!safeStorage.isEncryptionAvailable()) return { ok: false, message: "This computer has no secure storage available for the key, so it wasn't saved." };
   try { await clientFor(key).models.retrieve(DEFAULT_MODEL); }
   catch (err) {
     const r = errorResult(err);
@@ -206,6 +207,10 @@ app.whenReady().then(() => {
   store = Object.assign({ collections: {}, assets: {} }, readJSON(DB_FILE, {}));
   settings = Object.assign({ model: DEFAULT_MODEL }, readJSON(SETTINGS_FILE, {}));
   protocol.handle("atlas", serve);
+  // macOS needs an app menu for Cmd+C / Cmd+V (pasting the API key) and Cmd+Q.
+  if (process.platform === "darwin") {
+    Menu.setApplicationMenu(Menu.buildFromTemplate([{ role: "appMenu" }, { role: "editMenu" }, { role: "viewMenu" }, { role: "windowMenu" }]));
+  }
   createWindow();
   app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
