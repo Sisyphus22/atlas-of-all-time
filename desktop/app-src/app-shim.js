@@ -43,7 +43,9 @@
     const snap = { docs: list, size: list.length, empty: !list.length, metadata: META, docChanges: () => [] };
     set.forEach((f) => { try { f(snap); } catch (e) { console.error(e); } });
   }
-  A.onDbChange((col) => emit(col));
+  const hasStore = typeof A.dbList === "function";
+  const isWeb = A.kind === "web";
+  if (hasStore) A.onDbChange((col) => emit(col));
   const db = {
     doc(p) {
       const i = p.lastIndexOf("/"); const col = p.slice(0, i), id = p.slice(i + 1);
@@ -80,7 +82,7 @@
     },
   };
 
-  window.claude = { use: async (name) => (name === "sample" ? sample : name === "db" ? db : name === "assets" ? assets : null) };
+  window.claude = { use: async (name) => (name === "sample" ? sample : name === "db" && hasStore ? db : name === "assets" && hasStore ? assets : null) };
 
   /* ---------- Claude settings panel ---------- */
   const css = `
@@ -117,6 +119,8 @@
     model.value = s.model;
     model.addEventListener("change", async () => { await A.setModel(model.value); status.className = "ok"; status.textContent = "Model saved."; });
     const save = h("button", { class: "btn primary", type: "submit" }, "Save key");
+    const remember = h("input", { id: "apiRemember", type: "checkbox" });
+    remember.checked = !!s.remember;
     const form = h("form", { class: "modal-body" },
       h("div", { class: "eyebrow" }, "Claude settings"),
       h("h3", { id: "modalTitle" }, s.hasKey ? "Claude is connected" : "Connect Claude"),
@@ -128,14 +132,17 @@
       h("div", { class: "modal-actions" }, h("button", { class: "btn", type: "button", onclick: () => A.openKeysPage() }, "Open the Anthropic Console")),
       h("div", { class: "field" }, h("label", { for: "apiKey" }, "API key"), key),
       h("div", { class: "field" }, h("label", { for: "apiModel" }, "Model"), model),
-      h("p", { class: "small" }, "The key is encrypted by your computer's secure storage and stays on this computer. It's only sent to Anthropic."),
+      isWeb ? h("label", { class: "small", style: "display:flex;gap:8px;align-items:center;margin-top:12px" }, remember, "Remember the key in this browser (only on your own computer)") : null,
+      h("p", { class: "small" }, isWeb
+        ? "The key stays in this browser and is only sent to Anthropic. Don't save it on a shared or public computer. Tip: set a monthly spend limit in the Anthropic Console."
+        : "The key is encrypted by your computer's secure storage and stays on this computer. It's only sent to Anthropic."),
       status,
       h("div", { class: "modal-actions" }, save,
         s.hasKey && !s.fromEnv ? h("button", { class: "btn ghost", type: "button", onclick: async () => { await A.clearKey(); await refreshGear(); close(); } }, "Remove key") : null,
         h("button", { class: "btn ghost", type: "button", onclick: () => close() }, "Close")));
     form.addEventListener("submit", async (e) => {
       e.preventDefault(); status.className = ""; status.textContent = "Checking the key…"; save.disabled = true;
-      const r = await A.setKey(key.value);
+      const r = await A.setKey(key.value, remember.checked);
       save.disabled = false;
       if (r.ok) { status.className = "ok"; status.textContent = "Key saved. Claude is connected."; key.value = ""; await refreshGear(); setTimeout(close, 900); }
       else { status.className = "err"; status.textContent = r.message; }

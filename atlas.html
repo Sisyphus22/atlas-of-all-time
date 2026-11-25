@@ -1119,7 +1119,7 @@ function openEntryForm(){
 $("addEntryBtn").addEventListener("click", openEntryForm);
 function renderMine(){
   const ul = $("mineList"); ul.replaceChildren();
-  if (!S.entries.length) ul.append(el("li", null, el("p", {class:"empty"}, S.db ? "No entries yet. Use 'Add an entry' to put your first event, family story or picture on the timeline." : "Sign in to Claude to add your own entries.")));
+  if (!S.entries.length) ul.append(el("li", null, el("p", {class:"empty"}, S.db ? "No entries yet. Use 'Add an entry' to put your first event, family story or picture on the timeline." : window.ATLAS_SITE ? "Adding your own entries, pictures and videos works in the desktop app for Windows, Mac and Linux." : "Sign in to Claude to add your own entries.")));
   for (const e of S.entries) ul.append(itemButton(e));
 }
 
@@ -1194,7 +1194,7 @@ function renderEra(){
 (function siteMode(){
   const site = window.ATLAS_SITE; if (!site || !site.download) return;
   const row = $("searchForm");
-  row.append(el("p", {class:"small", style:"margin:4px 0 0"}, "Want Claude, your own pictures and entries? ",
+  row.append(el("p", {class:"small", style:"margin:4px 0 0"}, "Want your own pictures, videos and entries? ",
     el("a", {href: site.download, target:"_blank", rel:"noopener", class:"btn primary", style:"display:inline-block;margin-left:6px;text-decoration:none;padding:6px 12px"}, "Download the app"), el("span", {style:"margin-left:8px"}, "Windows · Mac · Linux")));
 })();
 
