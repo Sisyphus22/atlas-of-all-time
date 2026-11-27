@@ -29,7 +29,15 @@ Pictures added with the "Add a picture or video" button stay on that computer (o
 
 `[year, category, title, text, {extras}]` – year is negative for BCE (`-2560`), and deep time is written like `-66e6`.
 Extras: `d` exact date `"1888-09-30"`, `q` newspaper search words, `r` regions for archive order
-(`uk au nz us de at fr nl es br sg jp in world`), `img`, `video`, `f` era-guide tag.
+(`uk au nz us de at fr nl es br sg jp in world`), `img`, `video`, `f` era-guide tag,
+`w` the Wikipedia article whose pictures appear under **Tell me more** (`""` for none).
+
+## Pictures in Tell me more
+
+When someone clicks **Tell me more**, up to four pictures from that event's Wikipedia article appear
+as the text starts, with each picture's author and licence linked to its Wikimedia Commons page.
+They load from Wikipedia, so they work in the desktop app and on the website when online, but not
+on the claude.ai page, which can't load pictures from other sites.
 
 ## Building the Windows app
 

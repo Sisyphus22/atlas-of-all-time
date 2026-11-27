@@ -13,9 +13,9 @@ const CSP = [
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https://upload.wikimedia.org https://thumb.wikimedia.org",
   "media-src 'self' blob:",
-  "connect-src 'self'",
+  "connect-src 'self' https://en.wikipedia.org",
 ].join("; ");
 
 fs.rmSync(OUT, { recursive: true, force: true });

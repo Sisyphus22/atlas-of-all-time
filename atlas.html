@@ -150,6 +150,20 @@ footer{padding-block:34px 48px;color:var(--dim);font-size:12.5px;border-top:1px 
 .modal-fig{position:relative;background:#0b0a09;border-bottom:1px solid var(--line)}
 .modal-fig img{display:block;width:100%;max-height:52vh;object-fit:cover}
 .modal-fig .tag{position:absolute;left:10px;bottom:10px;background:rgba(17,15,13,.85);border:1px solid var(--line);border-radius:4px;padding:2px 8px;font-size:11px;font-family:var(--mono);color:var(--muted)}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin:14px 0 4px}
+.gal figure{margin:0;background:#0b0a09;border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:zoom-in;animation:picIn .5s ease both}
+.gal figure:nth-child(2){animation-delay:.12s}.gal figure:nth-child(3){animation-delay:.24s}.gal figure:nth-child(4){animation-delay:.36s}
+.gal figure:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.gal img{display:block;width:100%;height:120px;object-fit:cover}
+.gal figure.big{grid-column:1/-1;cursor:zoom-out}
+.gal figure.big img{height:auto;max-height:62vh;object-fit:contain}
+.gal figcaption{padding:6px 8px 8px;font-size:11.5px;line-height:1.35;color:var(--muted)}
+.gal figcaption span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--fg);margin-bottom:3px}
+.gal figure.big figcaption span{-webkit-line-clamp:unset}
+.gal figcaption a{color:var(--dim);font-family:var(--mono);font-size:10.5px;word-break:break-word}
+.pics-note{margin:4px 0 8px}
+@keyframes picIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.gal figure{animation:none}}
 .plate{height:120px;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(135deg,transparent 0 9px,rgba(255,255,255,.025) 9px 10px),radial-gradient(ellipse at center,color-mix(in srgb,var(--c) 22%,transparent),transparent 70%)}
 .plate span{font-family:var(--display-sc);font-size:15px;color:var(--c);letter-spacing:.08em}
 .modal-body{padding:20px 22px 24px}
@@ -520,14 +534,14 @@ async function load(){
   S.spans = data.spans.map(r => {
     const [s,e,lane,name,note,x] = r; let id = "s-" + lane + "-" + slug(name);
     while (seen.has(id)) id += "-2"; seen.add(id);
-    return {kind:"span", id, s, e, lane, name, title:name, text:note, img:x&&x.img, video:x&&x.video, f:x&&x.f};
+    return {kind:"span", id, s, e, lane, name, title:name, text:note, img:x&&x.img, video:x&&x.video, f:x&&x.f, w:x&&x.w};
   });
   S.events = data.events.map(r => {
     const [t0,cat,title,text,x] = r; const d = x && x.d;
     let t = t0 + (t0 > -10000 && !d ? .5 : 0);
     if (d) { const [y,m,dd] = d.split("-").map(Number); t = decYear(y,m,dd); }
     let id = "e-" + cat + "-" + slug(title); while (seen.has(id)) id += "-2"; seen.add(id);
-    return {kind:"event", id, t, cat, title, text, d, img:x&&x.img, video:x&&x.video, f:x&&x.f, q:x&&x.q, r:x&&x.r};
+    return {kind:"event", id, t, cat, title, text, d, img:x&&x.img, video:x&&x.video, f:x&&x.f, q:x&&x.q, r:x&&x.r, w:x&&x.w};
   }).sort((a,b) => a.t - b.t);
   packSpans();
 }
@@ -912,7 +926,8 @@ function renderModal(){
     else { const sel = it.d ? (() => { const [y,mo,d] = it.d.split("-").map(Number); return {t:it.t, prec:"day", y, m:mo, d}; })() : {t:it.t, prec: it.t < -15000 ? "deep" : "year"}; select(sel, true); }
     $("stage").scrollIntoView({behavior: reduceMotion ? "auto" : "smooth", block:"center"});
   }}, "Go to this moment"));
-  if (S.sample) actions.append(el("button", {class:"btn primary", type:"button", id:"moreBtn", onclick: () => tellMore(it, more, status)}, "Tell me more"));
+  const gal = el("div", {class:"pics", id:"moreGal", "aria-live":"polite"});
+  if (S.sample) actions.append(el("button", {class:"btn primary", type:"button", id:"moreBtn", onclick: () => tellMore(it, more, status, gal)}, "Tell me more"));
   const canPic = S.assets && S.db && it.kind !== "entry";
   if (canPic) {
     actions.append(el("button", {class:"btn", type:"button", onclick: () => pickPicture(it)}, S.pictures.has(it.id) ? "Replace picture or video" : "Add a picture or video"));
@@ -928,7 +943,7 @@ function renderModal(){
       el("p", {class:"small"}, paperNote(papersYear) + (q ? " Searching for: " + q + "." : "")),
       el("ul", {class:"near"}, paperLinks(isSpan ? {t: it.s, prec:"year"} : it, q)));
   }
-  body.append(actions, el("div", {id:"confirmSlot"}), status, more, papers);
+  body.append(actions, el("div", {id:"confirmSlot"}), status, gal, more, papers);
   m.append(body);
 }
 
@@ -1026,21 +1041,104 @@ $("askBtn").addEventListener("click", ask);
 $("paperQ").addEventListener("input", () => renderPapers());
 $("askStop").addEventListener("click", () => askCtl && askCtl.abort());
 
-async function tellMore(it, out, st){
+async function tellMore(it, out, st, gal){
   if (!S.sample) return;
   if (modalCtl) modalCtl.abort();
   const ctl = modalCtl = new AbortController();
   const btn = $("moreBtn"); if (btn) btn.disabled = true;
   st.textContent = "Thinking…"; out.replaceChildren();
+  // Pictures load alongside and appear once the text starts.
+  let pics = null, started = false, shown = false;
+  const showPics = () => { if (gal && pics && started && !shown && !ctl.signal.aborted) { shown = true; renderPictures(gal, pics); } };
+  if (gal && !gal.childNodes.length) findPictures(it, ctl.signal).then(p => { pics = p; showPics(); }).catch(() => {});
   let pending = null, raf = 0;
   try {
-    const res = await S.sample(buildItemPrompt(it), { signal: ctl.signal, onText: ({text}) => { pending = text; st.textContent = "Writing…"; if (!raf) raf = requestAnimationFrame(() => { raf = 0; renderMd(out, pending); }); } });
+    const res = await S.sample(buildItemPrompt(it), { signal: ctl.signal, onText: ({text}) => { pending = text; st.textContent = "Writing…"; if (!started) { started = true; showPics(); } if (!raf) raf = requestAnimationFrame(() => { raf = 0; renderMd(out, pending); }); } });
     cancelAnimationFrame(raf); renderMd(out, res.text); st.textContent = "From Claude · check important details";
   } catch (e) {
     cancelAnimationFrame(raf);
     if (e && e.text && e.code !== "refused") renderMd(out, e.text);
     if (e && e.code !== "cancelled") st.textContent = errCopy(e);
-  } finally { if (modalCtl === ctl) modalCtl = null; const b = $("moreBtn"); if (b) b.disabled = false; }
+  } finally { started = true; showPics(); if (modalCtl === ctl) modalCtl = null; const b = $("moreBtn"); if (b) b.disabled = false; }
+}
+
+/* ---------- pictures from Wikimedia Commons ---------- */
+const WIKI_API = "https://en.wikipedia.org/w/api.php";
+const picCache = new Map();
+const SKIP_FILE = /\.(svg|gif|tiff?|webm|ogg|ogv|mp3|wav|pdf|djvu)$|logo|icon|flag of|coat of arms|signature|locator|symbol|commons-|wiki|disambig|question|padlock|portal|stub|placeholder|speaker/i;
+function wikiQuery(it){
+  if (it.kind === "span") return it.name + (it.lane === "style" ? " art" : ["eon","era","period","epoch"].includes(it.lane) ? " geology" : "");
+  const y = Math.floor(it.t);
+  return it.title + (it.t > -5000 ? " " + (y < 0 ? (-y) + " BC" : y) : "");
+}
+const plainText = s => { const d = document.createElement("div"); d.innerHTML = String(s || "").replace(/<[^>]*>/g, " "); return (d.textContent || "").replace(/label QS:[^,\s]+,"[^"]*"/g, "").replace(/\s+/g, " ").trim(); };
+const clip = (s, n) => s.length > n ? s.slice(0, n - 1).trim() + "…" : s;
+async function wikiJSON(params, signal){
+  const r = await fetch(WIKI_API + "?" + new URLSearchParams({format:"json", formatversion:"2", origin:"*", ...params}), {signal});
+  if (!r.ok) throw new Error("wiki " + r.status);
+  return r.json();
+}
+async function findPictures(it, signal){
+  if (picCache.has(it.id)) return picCache.get(it.id);
+  // 1. the best-matching Wikipedia article; 2. its pictures in page order, with the article's captions
+  // Atlas items carry their article ("w"); your own entries are searched for.
+  let hit = it.w ? {title: it.w} : null;
+  if (!hit && it.w !== "") {
+    const s = await wikiJSON({action:"query", list:"search", srsearch: wikiQuery(it), srlimit:"1", srnamespace:"0", srprop:""}, signal);
+    hit = s.query && s.query.search && s.query.search[0];
+  }
+  if (!hit) { picCache.set(it.id, []); return []; }
+  const r = await fetch("https://en.wikipedia.org/api/rest_v1/page/media-list/" + encodeURIComponent(hit.title.replace(/ /g, "_")), {signal});
+  let items = r.ok ? ((await r.json()).items || []) : [];
+  if (!items.length) {
+    // Backup: the article's main picture, then its other pictures (in name order)
+    const b = await wikiJSON({action:"query", titles: hit.title, redirects:"1", prop:"pageimages|images", piprop:"name", imlimit:"60"}, signal);
+    const pg = ((b.query && b.query.pages) || [])[0] || {};
+    items = [pg.pageimage && {title: pg.pageimage, type: "image"}, ...(pg.images || []).map(x => ({title: x.title, type: "image"}))].filter(Boolean);
+  }
+  const norm = n => "File:" + String(n).replace(/^File:/, "").replace(/_/g, " ");
+  const want = [], caps = new Map();
+  for (const x of items) {
+    if (x.type !== "image" || x.showInGallery === false) continue;
+    const n = norm(x.title);
+    if (SKIP_FILE.test(n) || want.includes(n)) continue;
+    want.push(n); if (x.caption && x.caption.text) caps.set(n, plainText(x.caption.text));
+    if (want.length === 12) break;
+  }
+  if (!want.length) { picCache.set(it.id, []); return []; }
+  const info = await wikiJSON({action:"query", titles: want.join("|"), prop:"imageinfo", iiprop:"url|size|mime|extmetadata", iiurlwidth:"640", iiextmetadatalanguage:"en", iiextmetadatafilter:"Artist|LicenseShortName|ImageDescription|ObjectName"}, signal);
+  const q = info.query || {}, byTitle = new Map((q.pages || []).map(p => [p.title, p]));
+  for (const x of q.normalized || []) if (byTitle.has(x.to)) byTitle.set(x.from, byTitle.get(x.to));
+  const pics = [];
+  for (const n of want) {
+    const p = byTitle.get(n), ii = p && p.imageinfo && p.imageinfo[0];
+    if (!ii || !/^image\/(jpeg|png)$/.test(ii.mime) || ii.width < 360 || ii.height < 240 || ii.width / ii.height > 3.2 || ii.height / ii.width > 3.2) continue;
+    if (!/^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(ii.thumburl || "") || !/^https:\/\//.test(ii.descriptionurl || "")) continue;
+    const m = ii.extmetadata || {}, val = k => plainText(m[k] && m[k].value);
+    pics.push({thumb: ii.thumburl, page: ii.descriptionurl, file: n.replace(/^File:/, "").replace(/\.[a-z]+$/i, ""),
+      desc: clip(caps.get(n) || val("ObjectName") || val("ImageDescription") || n.replace(/^File:/, "").replace(/\.[a-z]+$/i, ""), 140),
+      artist: clip(val("Artist").replace(/^(.+?) \1$/, "$1"), 48), license: val("LicenseShortName")});
+    if (pics.length === 4) break;
+  }
+  picCache.set(it.id, pics);
+  return pics;
+}
+function renderPictures(box, pics){
+  box.replaceChildren();
+  if (!pics.length) return;
+  const grid = el("div", {class:"gal"});
+  for (const p of pics) {
+    const img = el("img", {src: p.thumb, alt: p.desc, loading: "lazy", referrerpolicy: "no-referrer"});
+    const fig = el("figure", {tabindex: "0", title: "Click to enlarge"}, img,
+      el("figcaption", null, el("span", null, p.desc),
+        el("a", {href: p.page, target: "_blank", rel: "noopener noreferrer"}, [p.artist, p.license].filter(Boolean).join(" · ") || "Wikimedia Commons")));
+    const toggle = () => fig.classList.toggle("big");
+    img.addEventListener("error", () => { fig.remove(); if (!grid.children.length) box.replaceChildren(); });
+    fig.addEventListener("click", e => { if (!e.target.closest("a")) toggle(); });
+    fig.addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && !e.target.closest("a")) { e.preventDefault(); toggle(); } });
+    grid.append(fig);
+  }
+  box.append(grid, el("p", {class:"small pics-note"}, "Pictures from Wikimedia Commons, picked automatically, so check they fit. Click one to enlarge, or its credit to see the source."));
 }
 
 /* ---------- pictures & entries ---------- */
