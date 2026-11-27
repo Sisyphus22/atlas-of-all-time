@@ -1,7 +1,7 @@
 {
   "name": "atlas-of-all-time",
   "productName": "Atlas of All Time",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "An interactive timeline from the Big Bang to today, with Claude built in.",
   "author": {
     "name": "Valeria",

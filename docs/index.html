@@ -70,6 +70,8 @@ h1,h2,h3{text-wrap:balance;margin:0}
 
 /* Timeline */
 .ledger{padding-block:6px 10px}
+.wrap.ledger{max-width:none;padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
+@media (max-width:520px){.wrap.ledger{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}}
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px}
 .presets{display:flex;flex-wrap:wrap;gap:6px}
 .presets .btn{padding:6px 11px;font-size:13px}
